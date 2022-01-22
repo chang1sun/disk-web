@@ -1,4 +1,4 @@
-# disk-web
+# app
 
 ## Project setup
 ```
