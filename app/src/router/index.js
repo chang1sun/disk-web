@@ -7,7 +7,9 @@ import VueRouter from 'vue-router'
 // 实现路由懒加载
 const Login = () => import('../views/login.vue')
 const Register = () => import('../views/register.vue')
+const Forget = () => import('../views/forget.vue')
 const Home = () => import('../views/home.vue')
+const Content = () => import('../components/file/content.vue')
 
 Vue.use(VueRouter)
 
@@ -15,7 +17,14 @@ const routes = [
   { path: '/', redirect: '/login' },
   { path: '/login', component: Login },
   { path: '/register', component: Register },
-  { path: '/index', component: Home}
+  { path: '/forget', component: Forget },
+  { 
+    path: '/:userId',
+    component: Home,
+    children: [
+      {path: 'contents/:path', component: Content},
+    ]
+  }
 ]
 
 const router = new VueRouter({
@@ -28,9 +37,9 @@ router.beforeEach((to, from, next) => {
   // to将要访问的路径 from代表从哪个路径跳转而来
   // next 是一个函数，表示放行 next() 放行 next('/login') 强制跳转到登录页面
   // 如果是登录页，直接放行即可
-  if (to.path === '/login') return next()
+  if (to.path === '/login' || to.path === '/register' || to.path === '/forget') return next()
   // 获取token
-  const tokenStr = window.sessionStorage.getItem('token')
+  const tokenStr = window.sessionStorage.getItem('userId')
   if (!tokenStr) return next('/login')
   next()
 })

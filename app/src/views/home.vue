@@ -1,18 +1,45 @@
 <template>
   <el-container class="home-container">
     <!-- 头部区域 -->
-    <el-header>
-      <div>
-        <img src="../assets/logo.jpg" alt />
-        <span>电商后台管理系统</span>
+    <el-header class="header" name="home-header">
+      <span class="home-title">EasyDisk</span>
+      <div class="global-search">
+        <el-autocomplete
+          v-model="query"
+          :fetch-suggestions="querySearchAsync"
+          placeholder="请输入想要搜索的内容"
+          @select="handleSelect"
+        ></el-autocomplete>
       </div>
-      <el-button type="info" @click="exit">退出</el-button>
+      <div class="user-profile">
+        <el-dropdown @command="handleCommand">
+          <span class="el-dropdown-link">
+            <el-avatar>
+              {{ profile.userId.charAt(0).toUpperCase() }}
+            </el-avatar>
+          </span>
+          <el-dropdown-menu slot="dropdown">
+            <el-dropdown-item command="profile"
+              ><i class="el-icon-edit el-icon--right"></i
+              >个人信息</el-dropdown-item
+            >
+            <el-dropdown-item command="setting"
+              ><i class="el-icon-setting el-icon--right"></i
+              >偏好设置</el-dropdown-item
+            >
+            <el-dropdown-item command="quit" divided
+              ><i class="el-icon-switch-button el-icon--right"></i
+              >切换账号</el-dropdown-item
+            >
+          </el-dropdown-menu>
+        </el-dropdown>
+      </div>
     </el-header>
     <!-- 页面主体区域 -->
     <el-container>
       <!-- 侧边栏 -->
       <el-aside :width="isCollapse ? '64px' : '200px'">
-        <div class="toggle-button" @click="toggleCollapse">|||</div>
+        <div class="toggle-button" @click="toggleCollapse">&#60;&#62;</div>
         <!-- 侧边栏菜单区域 -->
         <el-menu
           background-color="#333744"
@@ -22,31 +49,122 @@
           :collapse="isCollapse"
           :collapse-transition="false"
           router
-          :default-active="activePath"
+          :default-active="profile.userId + '/contents/' + encodeURIComponent('/')"
         >
-        <!-- 一级菜单 -->
-          <el-submenu :index="item.id + ''" v-for="item in menulist" :key="item.id">
+          <el-submenu :index="'1'">
             <!-- 一级菜单模板区域 -->
             <template slot="title">
-              <!-- 图标 -->
-              <i :class="iconsObj[item.id]"></i>
-              <!-- 文本 -->
-              <span>{{item.authName}}</span>
+              <i class="el-icon-folder-opened"></i>
+              <span>文件管理</span>
             </template>
             <!-- 二级菜单 -->
-            <el-menu-item :index="subItem.path" v-for="subItem in item.children" :key="subItem.id" @click="saveNavState(subItem.path)">
+            <el-menu-item
+              :index="profile.userId + '/contents/' + encodeURIComponent('/')"
+              @click="saveNavState(profile.userId + '/contents/' + encodeURIComponent('/'))"
+            >
               <template slot="title">
-              <!-- 图标 -->
-              <i class="el-icon-menu"></i>
-              <!-- 文本 -->
-              <span>{{subItem.authName}}</span>
-            </template>
+                <i class="el-icon-menu"></i>
+                <span>目录</span>
+              </template>
+            </el-menu-item>
+            <el-menu-item
+              :index="profile.userId + '/pictures'"
+              @click="saveNavState(profile.userId + '/pictures')"
+            >
+              <template slot="title">
+                <i class="el-icon-menu"></i>
+                <span>图片</span>
+              </template>
+            </el-menu-item>
+            <el-menu-item
+              :index="profile.userId + '/videos'"
+              @click="saveNavState(profile.userId + '/videos')"
+            >
+              <template slot="title">
+                <i class="el-icon-menu"></i>
+                <span>视频</span>
+              </template>
+            </el-menu-item>
+            <el-menu-item
+              :index="profile.userId + '/musics'"
+              @click="saveNavState(profile.userId + '/musics')"
+            >
+              <template slot="title">
+                <i class="el-icon-menu"></i>
+                <span>音乐</span>
+              </template>
+            </el-menu-item>
+            <el-menu-item
+              :index="profile.userId + '/documents'"
+              @click="saveNavState(profile.userId + '/documents')"
+            >
+              <template slot="title">
+                <i class="el-icon-menu"></i>
+                <span>文件</span>
+              </template>
+            </el-menu-item>
+            <el-menu-item
+              :index="profile.userId + '/others'"
+              @click="saveNavState(profile.userId + '/others')"
+            >
+              <template slot="title">
+                <i class="el-icon-menu"></i>
+                <span>其他</span>
+              </template>
             </el-menu-item>
           </el-submenu>
+          <el-menu-item :index="profile.userId + '/share'">
+            <template slot="title">
+              <i class="el-icon-connection"></i>
+              <span>分享与转存</span>
+            </template>
+          </el-menu-item>
+          <el-menu-item :index="profile.userId + '/statistic'">
+            <template slot="title">
+              <i class="el-icon-s-data"></i>
+              <span>统计与分析</span>
+            </template>
+          </el-menu-item>
+          <el-menu-item :index="profile.userId + '/recycle-bin'">
+            <template slot="title">
+              <i class="el-icon-delete"></i>
+              <span>回收站</span>
+            </template>
+          </el-menu-item>
         </el-menu>
       </el-aside>
       <!-- 右侧主体区域 -->
       <el-main>
+        <el-dialog title="用户信息" :visible.sync="dialogProfileVisible">
+          <el-descriptions title="用户信息">
+            <el-descriptions-item label="用户名">{{
+              profile.userId
+            }}</el-descriptions-item>
+            <el-descriptions-item label="电子邮箱"
+              >{{ profile.authEmail
+              }}<el-button
+                type="text"
+                @click="openEmailInput"
+                icon="el-icon-edit"
+                size="small"
+                class="email-show-btn"
+              >
+              </el-button
+            ></el-descriptions-item>
+            <el-descriptions-item label="状态">
+              <el-tag size="small">良好</el-tag>
+            </el-descriptions-item>
+            <el-descriptions-item label="注册时间">{{
+              profile.registerTime
+            }}</el-descriptions-item>
+            <el-descriptions-item label="拥有文件数">{{
+              profile.fileNum
+            }}</el-descriptions-item>
+            <el-descriptions-item label="已上传的文件数">{{
+              profile.fileUploadNum
+            }}</el-descriptions-item>
+          </el-descriptions>
+        </el-dialog>
         <!-- 路由占位符 -->
         <router-view></router-view>
       </el-main>
@@ -56,53 +174,140 @@
 
 <script>
 export default {
-  data () {
+  data() {
     return {
-      // 左侧菜单数据
-      menulist: [],
-      // 菜单项icon
-      iconsObj: {
-        125: 'iconfont icon-user',
-        103: 'iconfont icon-tijikongjian',
-        101: 'iconfont icon-shangpin',
-        102: 'iconfont icon-danju',
-        145: 'iconfont icon-baobiao'
+      // 以下为用户资料所需data
+      profile: {
+        userId: "",
+        registerTime: "",
+        authEmail: "",
+        fileNum: "",
+        fileUploadNum: "",
+        usedSize: "",
+        totalSize: "",
       },
+      // 以下为全局搜索data
+      // 搜索推荐
+      results: [],
+      // 搜索输入
+      query: "",
+      // 搜索超时
+      timeout: null,
       // 是否折叠
       isCollapse: false,
       // 被激活的链接地址
-      activePath: ''
-    }
+      activePath: "",
+      dialogProfileVisible: false,
+      dialogSettingVisible: false,
+    };
   },
-  created () {
-    this.getMenuList()
-    this.activePath = window.sessionStorage.getItem('activePath')
+  created() {
+    this.profile.userId = window.sessionStorage.getItem("userId");
+    this.activePath = window.sessionStorage.getItem("activePath");
   },
   methods: {
-    exit () {
-      // 清空token
-      window.sessionStorage.clear()
-      // 跳转到登录页
-      this.$router.push('/login')
-    },
-    // 获取所有的菜单
-    async getMenuList () {
-      const { data: res } = await this.$http.get('menus')
-      if (res.meta.status !== 200) return this.$message.error(res.meta.msg)
-      this.menulist = res.data
-      // console.log(res)
-    },
     // 点击按钮，切换按钮的折叠与展开
-    toggleCollapse () {
-      this.isCollapse = !this.isCollapse
+    toggleCollapse() {
+      this.isCollapse = !this.isCollapse;
     },
     // 保存链接的激活状态
-    saveNavState (activePath) {
-      window.sessionStorage.setItem('activePath', activePath)
-      this.activePath = activePath
-    }
-  }
-}
+    saveNavState(activePath) {
+      window.sessionStorage.setItem("activePath", activePath);
+      this.activePath = activePath;
+    },
+    // 加载用户信息
+    loadProfile() {
+      this.$http.get(this.profile.userId + "/profile").then((res) => {
+        if (res.status !== 200)
+          return this.$message.error("服务器异常，请重试!");
+        else if (res.data !== null && "code" in res.data) {
+          return this.$message.error(res.data.msg);
+        } else {
+          this.profile = res.data;
+          this.profile.userId = window.sessionStorage.getItem("userId");
+        }
+      });
+    },
+    openEmailInput() {
+      this.$prompt("请输入邮箱", "提示", {
+        confirmButtonText: "确定",
+        cancelButtonText: "取消",
+        inputPattern:
+          /[\w!#$%&'*+/=?^_`{|}~-]+(?:\.[\w!#$%&'*+/=?^_`{|}~-]+)*@(?:[\w](?:[\w-]*[\w])?\.)+[\w](?:[\w-]*[\w])?/,
+        inputErrorMessage: "邮箱格式不正确",
+      })
+        .then(({ value }) => {
+          this.$http
+            .post(this.profile.userId + "/profile/modify", { authEmail: value })
+            .then((res) => {
+              if (res.status !== 200)
+                return this.$message.error("服务器异常，请重试!");
+              else if (res.data !== null && "code" in res.data) {
+                return this.$message.error(res.data.msg);
+              } else {
+                this.loadProfile();
+              }
+            });
+        })
+        .catch(() => {
+          this.$message({
+            type: "info",
+            message: "取消输入",
+          });
+        });
+    },
+    // 以下是全局搜索的方法
+    // 加载搜索提示
+    loadAll() {
+      return [
+        { value: "三全鲜食（北新泾店）", address: "长宁区新渔路144号" },
+        {
+          value: "Hot honey 首尔炸鸡（仙霞路）",
+          address: "上海市长宁区淞虹路661号",
+        },
+        {
+          value: "新旺角茶餐厅",
+          address: "上海市普陀区真北路988号创邑金沙谷6号楼113",
+        },
+      ];
+    },
+    querySearchAsync(queryString, cb) {
+      var restaurants = this.restaurants;
+      var results = queryString
+        ? restaurants.filter(this.createStateFilter(queryString))
+        : restaurants;
+
+      clearTimeout(this.timeout);
+      this.timeout = setTimeout(() => {
+        cb(results);
+      }, 3000 * Math.random());
+    },
+    createStateFilter(queryString) {
+      return (query) => {
+        return (
+          query.value.toLowerCase().indexOf(queryString.toLowerCase()) === 0
+        );
+      };
+    },
+    handleSelect(item) {
+      console.log(item);
+    },
+    handleCommand(command) {
+      if (command === "quit") {
+        // 清空token
+        window.sessionStorage.clear();
+        // 跳转到登录页
+        this.$router.push("/login");
+      } else if (command === "profile") {
+        this.dialogProfileVisible = true;
+      }
+    },
+  },
+  mounted() {
+    this.loadProfile();
+    this.restaurants = this.loadAll();
+  },
+};
 </script>
 
 <style lang="less" scoped>
@@ -114,16 +319,8 @@ export default {
   display: flex;
   justify-content: space-between;
   padding-left: 0;
-  align-items: center;
   color: #fff;
   font-size: 20px;
-  > div {
-    display: flex;
-    align-items: center;
-    span {
-      margin-left: 15px;
-    }
-  }
 }
 .el-aside {
   background-color: #333744;
@@ -138,12 +335,32 @@ export default {
   margin-right: 10px;
 }
 .toggle-button {
-  background-color: #4a5064;
+  background-color: #1f2022;
   font-size: 10px;
   line-height: 24px;
   color: #fff;
   text-align: center;
   letter-spacing: 0.2em;
   cursor: pointer;
+}
+.global-search {
+  position: absolute;
+  top: 10px;
+  right: 400px;
+}
+.home-title {
+  position: absolute;
+  top: 20px;
+  left: 30px;
+}
+.user-profile {
+  position: absolute;
+  top: 10px;
+  right: 20px;
+}
+.email-show-btn {
+    position: absolute;
+    top: 125px;
+    right: 260px;
 }
 </style>
