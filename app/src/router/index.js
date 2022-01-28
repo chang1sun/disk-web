@@ -10,6 +10,7 @@ const Register = () => import('../views/register.vue')
 const Forget = () => import('../views/forget.vue')
 const Home = () => import('../views/home.vue')
 const Content = () => import('../components/file/content.vue')
+const Uploader = () => import ('../components/file/uploader/global-uploader.vue')
 
 Vue.use(VueRouter)
 
@@ -23,6 +24,7 @@ const routes = [
     component: Home,
     children: [
       {path: 'contents/:path', component: Content},
+      {path: 'upload', component: Uploader},
     ]
   }
 ]
