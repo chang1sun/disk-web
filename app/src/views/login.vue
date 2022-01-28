@@ -122,7 +122,7 @@ export default {
         else {
           this.$message.success("登录成功!");
           window.sessionStorage.setItem("userId", postForm.userId);
-          this.$router.push("/index");
+          this.$router.push('/' + postForm.userId + '/contents/' + encodeURIComponent('/'));
         }
         // 1.将登录成功之后的 token，保存到客户端的 sessionStorage 中
         //   1.1项目中除了登录之外的其它api接口，必须在登录之后才能访问

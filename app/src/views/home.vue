@@ -59,7 +59,7 @@
             </template>
             <!-- 二级菜单 -->
             <el-menu-item
-              :index="profile.userId + '/contents/' + encodeURIComponent('/')"
+              :index="'/' + profile.userId + '/contents/' + encodeURIComponent('/')"
               @click="saveNavState(profile.userId + '/contents/' + encodeURIComponent('/'))"
             >
               <template slot="title">
@@ -68,7 +68,7 @@
               </template>
             </el-menu-item>
             <el-menu-item
-              :index="profile.userId + '/pictures'"
+              :index="'/' + profile.userId + '/pictures'"
               @click="saveNavState(profile.userId + '/pictures')"
             >
               <template slot="title">
@@ -77,7 +77,7 @@
               </template>
             </el-menu-item>
             <el-menu-item
-              :index="profile.userId + '/videos'"
+              :index="'/' + profile.userId + '/videos'"
               @click="saveNavState(profile.userId + '/videos')"
             >
               <template slot="title">
@@ -86,7 +86,7 @@
               </template>
             </el-menu-item>
             <el-menu-item
-              :index="profile.userId + '/musics'"
+              :index="'/' + profile.userId + '/musics'"
               @click="saveNavState(profile.userId + '/musics')"
             >
               <template slot="title">
@@ -95,7 +95,7 @@
               </template>
             </el-menu-item>
             <el-menu-item
-              :index="profile.userId + '/documents'"
+              :index="'/' + profile.userId + '/documents'"
               @click="saveNavState(profile.userId + '/documents')"
             >
               <template slot="title">
@@ -104,7 +104,7 @@
               </template>
             </el-menu-item>
             <el-menu-item
-              :index="profile.userId + '/others'"
+              :index="'/' + profile.userId + '/others'"
               @click="saveNavState(profile.userId + '/others')"
             >
               <template slot="title">
@@ -113,19 +113,19 @@
               </template>
             </el-menu-item>
           </el-submenu>
-          <el-menu-item :index="profile.userId + '/share'">
+          <el-menu-item :index="'/' + profile.userId + '/share'">
             <template slot="title">
               <i class="el-icon-connection"></i>
               <span>分享与转存</span>
             </template>
           </el-menu-item>
-          <el-menu-item :index="profile.userId + '/statistic'">
+          <el-menu-item :index="'/' + profile.userId + '/statistic'">
             <template slot="title">
               <i class="el-icon-s-data"></i>
               <span>统计与分析</span>
             </template>
           </el-menu-item>
-          <el-menu-item :index="profile.userId + '/recycle-bin'">
+          <el-menu-item :index="'/' + profile.userId + '/recycle-bin'">
             <template slot="title">
               <i class="el-icon-delete"></i>
               <span>回收站</span>

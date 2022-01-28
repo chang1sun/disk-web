@@ -13,10 +13,12 @@ import './assets/fonts/iconfont.css'
 // 导入NProgress包对应的js和css
 import NProgress from 'nprogress'
 import 'nprogress/nprogress.css'
+import uploader from 'vue-simple-uploader'
 
 Vue.config.productionTip = false
 
 Vue.use(ElementUI);
+Vue.use(uploader);
 
 // 配置请求的根路径
 axios.defaults.baseURL = 'http://127.0.0.1:8001/v1/'
