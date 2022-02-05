@@ -27,7 +27,7 @@
       >
     </el-breadcrumb>
     <el-button-group class="btn-group-up">
-      <el-button type="primary" @click="$router.push('/'+userId+'/upload')"
+      <el-button type="primary" @click="uploadDialogVisible = true"
         >上传<i class="el-icon-upload el-icon--right"></i
       ></el-button>
       <el-button type="primary" icon="el-icon-circle-plus-outline" plain
@@ -44,6 +44,7 @@
     >
     </el-switch>
     <el-table
+      :key="contentTableKey"
       class="content-table"
       ref="multipleTable"
       :data="content"
@@ -102,22 +103,91 @@
       </el-table-column>
       <el-table-column fixed="right" label="操作" width="240">
         <template slot-scope="scope">
-          <el-button type="text" size="small"> 复制 </el-button>
-          <el-button type="text" size="small"> 移动 </el-button>
-          <el-button
-            @click.native.prevent="deleteRow(scope.$index, tableData)"
-            type="text"
-            size="small"
-          >
-            删除
-          </el-button>
+          <div class="op-group">
+            <el-button
+              type="text"
+              size="small"
+              @click="copyDialogVisible = true"
+            >
+              复制
+            </el-button>
+            <el-button type="text" size="small"> 移动 </el-button>
+            <el-dropdown class="op-more" placement="bottom">
+              <span class="el-dropdown-link">
+                &nbsp;&nbsp;&nbsp;&nbsp;<i
+                  class="el-icon-arrow-down el-icon--right"
+                ></i>
+              </span>
+              <el-dropdown-menu slot="dropdown">
+                <el-dropdown-item>重命名</el-dropdown-item>
+                <el-dropdown-item
+                  @click.native="moveToRecycleBin([scope.row.docId])"
+                  >删除</el-dropdown-item
+                >
+                <el-dropdown-item
+                  divided
+                  @click.native="setHiddenDoc([scope.row.docId], 1)"
+                  >设为隐藏</el-dropdown-item
+                >
+                <el-dropdown-item
+                  @click.native="setHiddenDoc([scope.row.docId], 2)"
+                  >取消隐藏</el-dropdown-item
+                >
+              </el-dropdown-menu>
+            </el-dropdown>
+          </div>
         </template>
       </el-table-column>
     </el-table>
+    <!-- 对话框 -->
+    <el-dialog
+      name="tree-dialog"
+      title="复制"
+      :visible.sync="copyDialogVisible"
+      width="20%"
+      :before-close="handleDialogClose"
+    >
+      <el-tree :props="tree.defaultProps" :load="loadNode" node-key="id" lazy>
+      </el-tree>
+    </el-dialog>
+    <el-dialog
+      name="upload-dialog"
+      title="上传文件"
+      :visible.sync="uploadDialogVisible"
+      width="30%"
+      :before-close="handleDialogClose"
+    >
+      <!-- 上传组件 -->
+      <el-upload
+        class="upload-demo"
+        ref="upload"
+        action=""
+        :auto-upload="false"
+        drag
+        :show-file-list="false"
+        :on-change="handleUploadChange"
+        :on-preview="handlePreview"
+        :on-remove="handleRemove"
+        :before-remove="beforeRemove"
+        :limit="1"
+        :on-exceed="handleExceed"
+        :file-list="fileList"
+      >
+        <i class="el-icon-upload"></i>
+        <div class="el-upload__text">将文件拖到此处，或<em>点击上传</em></div>
+      </el-upload>
+      <div v-if="isFileSelected">
+        <el-progress
+          :text-inside="true"
+          :stroke-width="18"
+          :percentage="uploadPercent"
+        ></el-progress>
+      </div>
+    </el-dialog>
   </el-container>
 </template>
 <script>
-import ElUploader from "./upload/index.vue";
+import SparkMD5 from "spark-md5";
 export default {
   data() {
     return {
@@ -126,11 +196,27 @@ export default {
         keyword: "",
       },
       content: [],
+      contentTableKey: null,
       multipleSelection: [], // 用户选中
       showHide: false, // 展示隐藏文件 & 文件夹
       contentLoading: true, // 是否正在载入
+      copyDialogVisible: false,
+      // 树形控件
+      tree: {
+        defaultProps: {
+          label: "docName",
+          isLeaf: (data, node) => {
+            return data.isDir === 1 ? false : true;
+          },
+          children: "children",
+        },
+      },
+      // 上传相关
       uploadDialogVisible: false, // 展示上传对话框
-      uploadFileList: [], // 上传文件列表
+      isFileSelected: false,
+      uploadPercent: 0,
+      fileList: [],
+      chunkSize: 1024 * 1024 * 50, // 分块大小：50Mb
     };
   },
   created() {
@@ -164,8 +250,7 @@ export default {
       return decodeURIComponent(this.$route.params.path);
     },
     getPathArray() {
-      var arr = this.getPathString(this.$route.params.path).split("/");
-      console.log(arr.slice(1, arr.length), arr.length);
+      var arr = this.getPathString().split("/");
       return arr.slice(1, arr.length);
     },
     async getContentList() {
@@ -181,6 +266,7 @@ export default {
           } else {
             this.contentLoading = false;
             this.content = res.data.details;
+            this.contentTableKey = Math.random();
           }
         });
     },
@@ -202,6 +288,328 @@ export default {
         "/" + this.userId + "/contents/" + encodeURIComponent(path)
       );
     },
+    loadNode(node, resolve) {
+      if (node.level === 0) {
+        this.$http
+          .get(this.userId + "/files", {
+            params: { path: "/", show_hide: true },
+          })
+          .then((res) => {
+            if (res.status !== 200) {
+              return this.$message.error("服务器异常，请重试!");
+            } else if (res.data !== null && "code" in res.data) {
+              return this.$message.error(res.data.msg);
+            } else if (res.data !== null) {
+              resolve(res.data.details);
+            }
+          });
+      } else {
+        if (node.data !== null) {
+          this.$http
+            .get(this.userId + "/files", {
+              params: {
+                path: node.data.docPath + node.data.docName + "/",
+                showHide: 1,
+              },
+            })
+            .then((res) => {
+              if (res.status !== 200) {
+                return this.$message.error("服务器异常，请重试!");
+              } else if (res.data !== null && "code" in res.data) {
+                return this.$message.error(res.data.msg);
+              } else if (res.data !== null) {
+                resolve(res.data.details);
+              }
+            });
+        }
+      }
+    },
+    async setHiddenDoc(docIds, hideStatus) {
+      const data = {
+        userId: this.userId,
+        ids: docIds,
+        hideStatus: hideStatus,
+      };
+      await this.$http.post("files/recycle", data).then((res) => {
+        if (res.status !== 200) {
+          return this.$message.error("服务器异常，请重试!");
+        } else if (res.data !== null && "code" in res.data) {
+          if (res.data.code === 20201) {
+            return this.$message.warn("参数错误，请检查输入或刷新重试");
+          } else if (res.data.code === 20202) {
+            return this.$message.error(
+              "修改数目与实际传入数不符，请再次检查文件列表"
+            );
+          }
+          return this.$message.error(res.data.msg);
+        } else if (res.data !== null) {
+          return this.$message.success("已成功!");
+        }
+      });
+      this.getContentList();
+    },
+    rename(docId, newName) {
+      const data = {
+        userId: this.userId,
+        id: docId,
+        newName: newName,
+        overwrite: 2, // 不覆盖
+      };
+      this.$http.post("files/rename", data).then((res) => {
+        if (res.status !== 200) {
+          return this.$message.error("服务器异常，请重试!");
+        } else if (res.data !== null && "code" in res.data) {
+          if (res.data.code === 10105) {
+            return this.$message.error("路径不存在！请刷新重试");
+          } else if (res.data.code === 10106) {
+            return this.$message.error("已存在同名文件或文件夹！");
+          }
+          return this.$message.error(res.data.msg);
+        } else if (res.data !== null) {
+          return this.$message.success("修改名字成功!");
+        }
+      });
+      this.getContentList();
+    },
+    mkdir(dirName) {
+      const data = {
+        userId: this.userId,
+        path: this.$route.params.path,
+        dirName: dirName,
+        overwrite: 2, // 不覆盖
+      };
+      this.$http.post("files/mkdir", data).then((res) => {
+        if (res.status !== 200) {
+          return this.$message.error("服务器异常，请重试!");
+        } else if (res.data !== null && "code" in res.data) {
+          if (res.data.code === 10105) {
+            return this.$message.error("路径不存在！请刷新重试");
+          } else if (res.data.code === 10106) {
+            return this.$message.error("已存在同名文件或文件夹！");
+          }
+          return this.$message.error(res.data.msg);
+        } else if (res.data !== null) {
+          return this.$message.success("创建新文件夹成功!");
+        }
+      });
+      this.getContentList();
+    },
+    moveToRecycleBin(docIds) {
+      this.$confirm(
+        "删除该文件将把文件放入回收站中，我们最多可以为您保存七天, 是否继续?",
+        "提示",
+        {
+          confirmButtonText: "确定",
+          cancelButtonText: "取消",
+          type: "warning",
+        }
+      )
+        .then(() => {
+          const data = {
+            userId: this.userId,
+            ids: docIds,
+          };
+          this.$http.post("files/recycle", data).then((res) => {
+            if (res.status !== 200) {
+              return this.$message.error("服务器异常，请重试!");
+            } else if (res.data !== null && "code" in res.data) {
+              if (res.data.code === 20201) {
+                return this.$message.warn("参数错误，请检查输入或刷新重试");
+              } else if (res.data.code === 20202) {
+                return this.$message.error(
+                  "删除数目与实际传入数不符，请再次检查文件列表"
+                );
+              }
+              return this.$message.error(res.data.msg);
+            } else if (res.data !== null) {
+              return this.$message.success("已成功删除!");
+            }
+          });
+          this.getContentList();
+        })
+        .catch(() => {});
+    },
+    removeDoc(docIds) {
+      const data = {
+        userId: this.userId,
+        ids: docIds,
+      };
+      this.$http.post("files/delete", data).then((res) => {
+        if (res.status !== 200) {
+          return this.$message.error("服务器异常，请重试!");
+        } else if (res.data !== null && "code" in res.data) {
+          if (res.data.code === 20201) {
+            return this.$message.warn("参数错误，请检查输入或刷新重试");
+          } else if (res.data.code === 20202) {
+            return this.$message.error(
+              "删除数目与实际传入数不符，请再次检查文件列表"
+            );
+          }
+          return this.$message.error(res.data.msg);
+        } else if (res.data !== null) {
+          return this.$message.success("已成功删除!");
+        }
+      });
+      this.getContentList();
+    },
+    //
+    // 上传相关
+    handleDialogClose(done) {
+      this.$confirm("确认关闭？")
+        .then((_) => {
+          done();
+        })
+        .catch((_) => {});
+    },
+    async handleUploadChange(file, fileList) {
+      if (!file) return;
+      console.log(file);
+      this.isFileSelected = true;
+      // 获取文件并转成 ArrayBuffer 对象
+      const fileObj = file.raw;
+      let buffer;
+      try {
+        buffer = await this.fileToBuffer(fileObj);
+      } catch (e) {
+        console.log(e);
+      }
+      // 根据文件内容生成 hash 值
+      const spark = new SparkMD5.ArrayBuffer();
+      spark.append(buffer);
+      const md5 = spark.end();
+      const formHeader = { "Content-Type": "multipart/form-data" };
+      // 低于50mb直接一次上传
+      if (fileObj.size < this.chunkSize) {
+        const formData = new FormData();
+        formData.append("user_id", this.userId);
+        formData.append("md5", md5);
+        formData.append("file", fileObj);
+        await this.$http
+          .post("file/upload", formData, {
+            header: formHeader,
+          })
+          .then((res) => {
+            if (res.status !== 200) {
+              return this.$message.error("服务器异常，请重试!");
+            } else if (res.data !== null && "code" in res.data) {
+              return this.$message.error(res.data.msg);
+            } else if (res.data !== null && "file_id" in res.data) {
+              this.uploadPercent = 100;
+              return this.$message.success("上传成功!");
+            }
+          });
+        return;
+      }
+      // 将文件按固定大小（50M）进行切片，注意此处同时声明了多个常量
+      const chunkList = []; // 保存所有切片的数组
+      const chunkListLength = Math.ceil(fileObj.size / this.chunkSize); // 计算总共多个切片
+      // 发送探测请求
+      var nextIdx = 0;
+      const testData = new FormData();
+      testData.append("user_id", this.userId);
+      testData.append("md5", md5);
+      testData.append("file_name", file.name);
+      testData.append("chunk_size", this.chunkSize);
+      testData.append("chunk_num", chunkListLength);
+      var continueUpload = false;
+      await this.$http
+        .post("file/mp-upload-test", testData, { header: formHeader })
+        .then((res) => {
+          if (res.status !== 200) {
+            return this.$message.error("服务器异常，请重试!");
+          } else if (res.data !== null && "code" in res.data) {
+            return this.$message.error(res.data.msg);
+          } else if (res.data !== null && "file_id" in res.data) {
+            this.uploadPercent = 100;
+            return this.$message.success("已成功秒传!");
+          } else if (res.data !== null && "next_idx" in res.data) {
+            continueUpload = true;
+            nextIdx = parseInt(res.data.next_idx);
+          } else {
+            return this.$message.error("服务器内部错误");
+          }
+        });
+      if (!continueUpload) return;
+      // 生成切片
+      let curChunk = 0; // 切片时的初始位置
+      for (let i = 0; i < chunkListLength; i++) {
+        const item = {
+          file: fileObj.slice(curChunk, curChunk + this.chunkSize),
+          md5: md5,
+          chunk_id: i,
+          userId: this.userId,
+        };
+        curChunk += this.chunkSize;
+        chunkList.push(item);
+      }
+      const uploadData = new FormData();
+      uploadData.append("user_id", this.userId);
+      uploadData.append("md5", md5);
+      uploadData.append("chunk_id", nextIdx);
+      uploadData.append("file", chunkList[nextIdx].file);
+      // 分多次发送请求，使用flag来控制循环结束
+      var flag = true;
+      var fusion = 0;
+      while (nextIdx < chunkListLength) {
+        console.log(uploadData);
+        await this.$http
+          .post("file/mp-upload", uploadData, { header: formHeader })
+          .then((res) => {
+            if (res.status !== 200) {
+              flag = false;
+              return this.$message.error("服务器异常，请重试!");
+            } else if (res.data !== null && "code" in res.data) {
+              flag = false;
+              return this.$message.error(res.data.msg);
+            } else if (res.data !== null && "next_idx" in res.data) {
+              fusion++;
+              nextIdx = parseInt(res.data.next_idx);
+              this.uploadPercent = Math.floor(
+                (nextIdx / chunkListLength) * 100
+              );
+              uploadData.set("chunk_id", nextIdx);
+              uploadData.set("file", chunkList[nextIdx].file);
+            } else if (res.data !== null && "file_id" in res.data) {
+              flag = false;
+              this.uploadPercent = 100;
+              return this.$message.success("文件已成功上传!");
+            } else {
+              flag = false;
+              return this.$message.error("服务器内部错误");
+            }
+          });
+        if (!flag || fusion >= chunkListLength) break;
+      }
+    },
+    // 将 File 对象转为 ArrayBuffer
+    fileToBuffer(file) {
+      return new Promise((resolve, reject) => {
+        const fr = new FileReader();
+        fr.onload = (e) => {
+          resolve(e.target.result);
+        };
+        fr.readAsArrayBuffer(file);
+        fr.onerror = () => {
+          reject(new Error("转换文件格式发生错误"));
+        };
+      });
+    },
+    handleRemove(file, fileList) {
+      console.log(file, fileList);
+    },
+    handlePreview(file) {
+      console.log(file);
+    },
+    handleExceed(files, fileList) {
+      this.$message.warning(
+        `当前限制选择 1 个文件，本次选择了 ${
+          files.length
+        } 个文件，共选择了       ${files.length + fileList.length} 个文件`
+      );
+    },
+    beforeRemove(file, fileList) {
+      return this.$confirm(`确定移除 ${file.name}？`);
+    },
   },
   mounted() {},
 };
@@ -221,5 +629,15 @@ export default {
   position: absolute;
   right: 100px;
   top: 120px;
+}
+.op-more {
+  font-size: 12px;
+}
+.el-dropdown-link {
+  cursor: pointer;
+  color: #409eff;
+}
+.el-icon-arrow-down {
+  font-size: 12px;
 }
 </style>

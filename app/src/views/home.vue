@@ -38,15 +38,14 @@
     <!-- 页面主体区域 -->
     <el-container>
       <!-- 侧边栏 -->
-      <el-aside :width="isCollapse ? '64px' : '200px'">
-        <div class="toggle-button" @click="toggleCollapse">&#60;&#62;</div>
+      <el-aside :width="'180px'">
         <!-- 侧边栏菜单区域 -->
         <el-menu
           background-color="#333744"
           text-color="#fff"
           active-text-color="#409eff"
           unique-opened
-          :collapse="isCollapse"
+          :collapse="false"
           :collapse-transition="false"
           router
           :default-active="profile.userId + '/contents/' + encodeURIComponent('/')"
@@ -132,6 +131,10 @@
             </template>
           </el-menu-item>
         </el-menu>
+        <div class="left-size">
+          <el-progress type="dashboard" :percentage="percentage" :color="colors"></el-progress>
+          <span class="size-desc">{{ displaySize(parseInt(profile.usedSize)) + " / " + displaySize(parseInt(profile.totalSize))}}</span>
+        </div>
       </el-aside>
       <!-- 右侧主体区域 -->
       <el-main>
@@ -199,6 +202,12 @@ export default {
       activePath: "",
       dialogProfileVisible: false,
       dialogSettingVisible: false,
+      percentage: 0,
+      colors: [
+          {color: '#5cb87a', percentage: 40},
+          {color: '#e6a23c', percentage: 80},
+          {color: '#f56c6c', percentage: 100}
+        ]
     };
   },
   created() {
@@ -206,6 +215,16 @@ export default {
     this.activePath = window.sessionStorage.getItem("activePath");
   },
   methods: {
+    displaySize(size) {
+      if (size === 0 || !size) {
+        return "";
+      } else if (size < 1000) return String(size) + "B";
+      else if (size > 1024 && size < 1048576)
+        return String((size / 1024).toFixed(1)) + "KB";
+      else if (size > 1048576 && size < 1073741824)
+        return String((size / 1048576).toFixed(1)) + "MB";
+      else return String((size / 1073741824).toFixed(1)) + "GB";
+    },
     // 点击按钮，切换按钮的折叠与展开
     toggleCollapse() {
       this.isCollapse = !this.isCollapse;
@@ -224,6 +243,7 @@ export default {
           return this.$message.error(res.data.msg);
         } else {
           this.profile = res.data;
+          this.percentage = Math.round(parseInt(this.profile.usedSize) / parseInt(this.profile.totalSize) * 100)
           this.profile.userId = window.sessionStorage.getItem("userId");
         }
       });
@@ -362,5 +382,20 @@ export default {
     position: absolute;
     top: 125px;
     right: 260px;
+}
+.size-desc {
+  color: #fff;
+  position: absolute;
+  font-size: 11px;
+  top: 120px;
+  right: 24px;
+}
+.left-size {
+  position: absolute;
+  left: 20px;
+  bottom: 40px;
+}
+/deep/ .el-progress__text {
+  color: #f3e388;
 }
 </style>
