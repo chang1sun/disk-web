@@ -27,15 +27,20 @@
       >
     </el-breadcrumb>
     <el-button-group class="btn-group-up">
-      <el-button type="primary" @click="uploadDialogVisible = true"
-        >上传<i class="el-icon-upload el-icon--right"></i
-      ></el-button>
-      <el-button type="primary" icon="el-icon-circle-plus-outline" plain
+      <el-button type="primary" icon="el-icon-upload" @click="uploadDialogVisible = true"
+        >上传</el-button>
+      <el-button
+        type="primary"
+        icon="el-icon-circle-plus-outline"
+        @click="mkdir()"
         >新建</el-button
       >
-      <el-button type="primary" icon="el-icon-edit">复制到...</el-button>
-      <el-button type="primary" icon="el-icon-share">移动到...</el-button>
-      <el-button type="danger" icon="el-icon-delete">删除</el-button>
+      <el-button type="primary" icon="el-icon-download" plain :disabled="multipleSelection.length === 0">下载</el-button>
+      <el-button type="primary" icon="el-icon-copy-document" plain :disabled="multipleSelection.length === 0">复制到...</el-button>
+      <el-button type="primary" icon="el-icon-thumb" plain :disabled="multipleSelection.length === 0">移动到...</el-button>
+      <el-button type="primary" icon="el-icon-open" plain :disabled="multipleSelection.length === 0">设为隐藏</el-button>
+      <el-button type="primary" icon="el-icon-turn-off" plain :disabled="multipleSelection.length === 0">取消隐藏</el-button>
+      <el-button type="danger" icon="el-icon-delete" :disabled="multipleSelection.length === 0">删除</el-button>
     </el-button-group>
     <el-switch
       v-model="showHide"
@@ -77,11 +82,10 @@
       </el-table-column>
       <el-table-column prop="docName" label="文件名" width="500" sortable>
         <template slot-scope="scope">
-          <span v-if="scope.row.isDir === 2">{{ scope.row.docName }}</span>
+          <span v-if="scope.row.isDir === 2" style="font-size: 14px">{{ scope.row.docName }}</span>
           <el-button
             v-else
             type="text"
-            size="small"
             @click="enterFolder(scope.row.docName)"
             >{{ scope.row.docName }}</el-button
           >
@@ -107,11 +111,17 @@
             <el-button
               type="text"
               size="small"
-              @click="copyDialogVisible = true"
+              @click="showCopyDialog(scope.row)"
             >
               复制
             </el-button>
-            <el-button type="text" size="small"> 移动 </el-button>
+            <el-button
+              type="text"
+              size="small"
+              @click="showMoveDialog(scope.row)"
+            >
+              移动
+            </el-button>
             <el-dropdown class="op-more" placement="bottom">
               <span class="el-dropdown-link">
                 &nbsp;&nbsp;&nbsp;&nbsp;<i
@@ -119,6 +129,7 @@
                 ></i>
               </span>
               <el-dropdown-menu slot="dropdown">
+                <el-dropdown-item>下载</el-dropdown-item>
                 <el-dropdown-item>重命名</el-dropdown-item>
                 <el-dropdown-item
                   @click.native="moveToRecycleBin([scope.row.docId])"
@@ -141,13 +152,35 @@
     </el-table>
     <!-- 对话框 -->
     <el-dialog
-      name="tree-dialog"
+      name="copy-dialog"
       title="复制"
       :visible.sync="copyDialogVisible"
-      width="20%"
+      width="40%"
       :before-close="handleDialogClose"
     >
-      <el-tree :props="tree.defaultProps" :load="loadNode" node-key="id" lazy>
+      <el-tree
+        :props="tree.defaultProps"
+        :load="loadNode"
+        node-key="id"
+        lazy
+        @node-click="copyToPath"
+      >
+      </el-tree>
+    </el-dialog>
+    <el-dialog
+      name="move-dialog"
+      title="移动"
+      :visible.sync="moveDialogVisible"
+      width="40%"
+      :before-close="handleDialogClose"
+    >
+      <el-tree
+        :props="tree.defaultProps"
+        :load="loadNode"
+        node-key="id"
+        lazy
+        @node-click="moveToPath"
+      >
       </el-tree>
     </el-dialog>
     <el-dialog
@@ -197,10 +230,12 @@ export default {
       },
       content: [],
       contentTableKey: null,
+      singleSelection: null,
       multipleSelection: [], // 用户选中
       showHide: false, // 展示隐藏文件 & 文件夹
       contentLoading: true, // 是否正在载入
       copyDialogVisible: false,
+      moveDialogVisible: false,
       // 树形控件
       tree: {
         defaultProps: {
@@ -265,8 +300,8 @@ export default {
             return this.$message.error(res.data.msg);
           } else {
             this.contentLoading = false;
-            this.content = res.data.details;
             this.contentTableKey = Math.random();
+            this.content = res.data.details;
           }
         });
     },
@@ -287,6 +322,14 @@ export default {
       this.$router.push(
         "/" + this.userId + "/contents/" + encodeURIComponent(path)
       );
+    },
+    showCopyDialog(data) {
+      this.copyDialogVisible = true;
+      this.singleSelection = data;
+    },
+    showMoveDialog(data) {
+      this.moveDialogVisible = true;
+      this.singleSelection = data;
     },
     loadNode(node, resolve) {
       if (node.level === 0) {
@@ -324,13 +367,13 @@ export default {
         }
       }
     },
-    async setHiddenDoc(docIds, hideStatus) {
+    setHiddenDoc(docIds, hideStatus) {
       const data = {
         userId: this.userId,
         ids: docIds,
         hideStatus: hideStatus,
       };
-      await this.$http.post("files/recycle", data).then((res) => {
+      this.$http.post("files/set-hidden", data).then((res) => {
         if (res.status !== 200) {
           return this.$message.error("服务器异常，请重试!");
         } else if (res.data !== null && "code" in res.data) {
@@ -343,56 +386,200 @@ export default {
           }
           return this.$message.error(res.data.msg);
         } else if (res.data !== null) {
-          return this.$message.success("已成功!");
+          this.getContentList();
+          return this.$message.success("设置成功!");
         }
       });
-      this.getContentList();
     },
-    rename(docId, newName) {
-      const data = {
-        userId: this.userId,
-        id: docId,
-        newName: newName,
-        overwrite: 2, // 不覆盖
-      };
-      this.$http.post("files/rename", data).then((res) => {
-        if (res.status !== 200) {
-          return this.$message.error("服务器异常，请重试!");
-        } else if (res.data !== null && "code" in res.data) {
-          if (res.data.code === 10105) {
-            return this.$message.error("路径不存在！请刷新重试");
-          } else if (res.data.code === 10106) {
-            return this.$message.error("已存在同名文件或文件夹！");
-          }
-          return this.$message.error(res.data.msg);
-        } else if (res.data !== null) {
-          return this.$message.success("修改名字成功!");
-        }
-      });
-      this.getContentList();
+    rename(docId) {
+      this.$prompt("请输入更改为的名字: ", "重命名", {
+        confirmButtonText: "确定",
+        cancelButtonText: "取消",
+      })
+        .then(({ value }) => {
+          const data = {
+            userId: this.userId,
+            id: docId,
+            newName: value,
+            overwrite: 2, // 不覆盖
+          };
+          this.$http.post("files/rename", data).then((res) => {
+            if (res.status !== 200) {
+              return this.$message.error("服务器异常，请重试!");
+            } else if (res.data !== null && "code" in res.data) {
+              if (res.data.code === 10105) {
+                return this.$message.error("路径不存在！请刷新重试");
+              } else if (res.data.code === 10106) {
+                return this.$message.error("已存在同名文件或文件夹！");
+              }
+              return this.$message.error(res.data.msg);
+            } else if (res.data !== null) {
+              this.getContentList();
+              return this.$message.success("修改名字成功!");
+            }
+          });
+        })
+        .catch(() => {});
     },
-    mkdir(dirName) {
-      const data = {
-        userId: this.userId,
-        path: this.$route.params.path,
-        dirName: dirName,
-        overwrite: 2, // 不覆盖
-      };
-      this.$http.post("files/mkdir", data).then((res) => {
-        if (res.status !== 200) {
-          return this.$message.error("服务器异常，请重试!");
-        } else if (res.data !== null && "code" in res.data) {
-          if (res.data.code === 10105) {
-            return this.$message.error("路径不存在！请刷新重试");
-          } else if (res.data.code === 10106) {
-            return this.$message.error("已存在同名文件或文件夹！");
-          }
-          return this.$message.error(res.data.msg);
-        } else if (res.data !== null) {
-          return this.$message.success("创建新文件夹成功!");
-        }
-      });
-      this.getContentList();
+    mkdir() {
+      this.$prompt("请输入文件夹名: ", "在当前路径下创建文件夹", {
+        confirmButtonText: "确定",
+        cancelButtonText: "取消",
+      })
+        .then(({ value }) => {
+          const data = {
+            userId: this.userId,
+            path: this.$route.params.path,
+            dirName: value,
+            overwrite: 2, // 不覆盖
+          };
+          this.$http.post("files/mkdir", data).then((res) => {
+            if (res.status !== 200) {
+              return this.$message.error("服务器异常，请重试!");
+            } else if (res.data !== null && "code" in res.data) {
+              if (res.data.code === 10105) {
+                return this.$message.error("路径不存在！请刷新重试");
+              } else if (res.data.code === 10106) {
+                return this.$message.error("已存在同名文件或文件夹！");
+              }
+              return this.$message.error(res.data.msg);
+            } else if (res.data !== null) {
+              this.getContentList();
+              return this.$message.success("创建新文件夹成功!");
+            }
+          });
+        })
+        .catch(() => {});
+    },
+    moveToPath(data, node, item) {
+      this.$confirm("将该文件或文件夹移动到所选路径下吗?", "提示", {
+        confirmButtonText: "确定",
+        cancelButtonText: "取消",
+        type: "info",
+      })
+        .then(() => {
+          const postdata = {
+            userId: this.userId,
+            path: data.docPath + data.docName + "/",
+            ids: [this.singleSelection.docId],
+            overwrite: 2,
+          };
+          this.$http.post("files/move", postdata).then((res) => {
+            if (res.status !== 200) {
+              return this.$message.error("服务器异常，请重试!");
+            } else if (res.data !== null && "code" in res.data) {
+              if (res.data.code === 10105) {
+                return this.$message.error("路径不存在！请刷新重试");
+              } else if (res.data.code === 10106) {
+                return this.$message.error("已存在同名文件或文件夹！");
+              }
+              return this.$message.error(res.data.msg);
+            } else if (res.data !== null) {
+              this.moveDialogVisible = false;
+              this.getContentList();
+              return this.$message.success("已成功移动至选定路径!");
+            }
+          });
+        })
+        .catch(() => {});
+    },
+    moveToPathInBatch(data, node, item) {
+      this.$confirm("将所选文件或文件夹移动到所选路径下吗?", "提示", {
+        confirmButtonText: "确定",
+        cancelButtonText: "取消",
+        type: "info",
+      })
+        .then(() => {
+          let ids = this.multipleSelection.map((a) => a.docId);
+          const postdata = {
+            userId: this.userId,
+            path: data.docPath + data.docName + "/",
+            ids: ids,
+            overwrite: 2,
+          };
+          this.$http.post("files/move", postdata).then((res) => {
+            if (res.status !== 200) {
+              return this.$message.error("服务器异常，请重试!");
+            } else if (res.data !== null && "code" in res.data) {
+              if (res.data.code === 10105) {
+                return this.$message.error("路径不存在！请刷新重试");
+              } else if (res.data.code === 10106) {
+                return this.$message.error("已存在同名文件或文件夹！");
+              }
+              return this.$message.error(res.data.msg);
+            } else if (res.data !== null) {
+              this.moveDialogVisible = false;
+              this.getContentList();
+              return this.$message.success("已成功移动至选定路径!");
+            }
+          });
+        })
+        .catch(() => {});
+    },
+    copyToPath(data, node, item) {
+      this.$confirm("将该文件或文件夹复制到所选路径下吗?", "提示", {
+        confirmButtonText: "确定",
+        cancelButtonText: "取消",
+        type: "info",
+      })
+        .then(() => {
+          const postdata = {
+            userId: this.userId,
+            path: data.docPath + data.docName + "/",
+            ids: [this.singleSelection.docId],
+            overwrite: 2,
+          };
+          this.$http.post("files/copy", postdata).then((res) => {
+            if (res.status !== 200) {
+              return this.$message.error("服务器异常，请重试!");
+            } else if (res.data !== null && "code" in res.data) {
+              if (res.data.code === 10105) {
+                return this.$message.error("路径不存在！请刷新重试");
+              } else if (res.data.code === 10106) {
+                return this.$message.error("已存在同名文件或文件夹！");
+              }
+              return this.$message.error(res.data.msg);
+            } else if (res.data !== null) {
+              this.copyDialogVisible = false;
+              this.getContentList();
+              return this.$message.success("已成功复制!");
+            }
+          });
+        })
+        .catch(() => {});
+    },
+    copyToPathInBatch(data, node, item) {
+      this.$confirm("将所选文件或文件夹复制到所选路径下吗?", "提示", {
+        confirmButtonText: "确定",
+        cancelButtonText: "取消",
+        type: "info",
+      })
+        .then(() => {
+          let ids = this.multipleSelection.map((a) => a.docId);
+          const postdata = {
+            userId: this.userId,
+            path: data.docPath + data.docName + "/",
+            ids: ids,
+            overwrite: 2,
+          };
+          this.$http.post("files/copy", postdata).then((res) => {
+            if (res.status !== 200) {
+              return this.$message.error("服务器异常，请重试!");
+            } else if (res.data !== null && "code" in res.data) {
+              if (res.data.code === 10105) {
+                return this.$message.error("路径不存在！请刷新重试");
+              } else if (res.data.code === 10106) {
+                return this.$message.error("已存在同名文件或文件夹！");
+              }
+              return this.$message.error(res.data.msg);
+            } else if (res.data !== null) {
+              this.copyDialogVisible = false;
+              this.getContentList();
+              return this.$message.success("已成功复制!");
+            }
+          });
+        })
+        .catch(() => {});
     },
     moveToRecycleBin(docIds) {
       this.$confirm(
@@ -492,6 +679,9 @@ export default {
             if (res.status !== 200) {
               return this.$message.error("服务器异常，请重试!");
             } else if (res.data !== null && "code" in res.data) {
+              if (res.data.code === 10109) {
+                return this.$message.info("已存在相同文件，请勿重复上传");
+              }
               return this.$message.error(res.data.msg);
             } else if (res.data !== null && "file_id" in res.data) {
               this.uploadPercent = 100;
@@ -518,6 +708,9 @@ export default {
           if (res.status !== 200) {
             return this.$message.error("服务器异常，请重试!");
           } else if (res.data !== null && "code" in res.data) {
+            if (res.data.code === 10109) {
+              return this.$message.info("已存在相同文件，请勿重复上传");
+            }
             return this.$message.error(res.data.msg);
           } else if (res.data !== null && "file_id" in res.data) {
             this.uploadPercent = 100;

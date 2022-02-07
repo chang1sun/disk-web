@@ -23,9 +23,9 @@
               ><i class="el-icon-edit el-icon--right"></i
               >个人信息</el-dropdown-item
             >
-            <el-dropdown-item command="setting"
+            <el-dropdown-item command="modify"
               ><i class="el-icon-setting el-icon--right"></i
-              >偏好设置</el-dropdown-item
+              >修改密码</el-dropdown-item
             >
             <el-dropdown-item command="quit" divided
               ><i class="el-icon-switch-button el-icon--right"></i
@@ -48,7 +48,9 @@
           :collapse="false"
           :collapse-transition="false"
           router
-          :default-active="profile.userId + '/contents/' + encodeURIComponent('/')"
+          :default-active="
+            profile.userId + '/contents/' + encodeURIComponent('/')
+          "
         >
           <el-submenu :index="'1'">
             <!-- 一级菜单模板区域 -->
@@ -58,8 +60,14 @@
             </template>
             <!-- 二级菜单 -->
             <el-menu-item
-              :index="'/' + profile.userId + '/contents/' + encodeURIComponent('/')"
-              @click="saveNavState(profile.userId + '/contents/' + encodeURIComponent('/'))"
+              :index="
+                '/' + profile.userId + '/contents/' + encodeURIComponent('/')
+              "
+              @click="
+                saveNavState(
+                  profile.userId + '/contents/' + encodeURIComponent('/')
+                )
+              "
             >
               <template slot="title">
                 <i class="el-icon-menu"></i>
@@ -132,12 +140,21 @@
           </el-menu-item>
         </el-menu>
         <div class="left-size">
-          <el-progress type="dashboard" :percentage="percentage" :color="colors"></el-progress>
-          <span class="size-desc">{{ displaySize(parseInt(profile.usedSize)) + " / " + displaySize(parseInt(profile.totalSize))}}</span>
+          <el-progress
+            type="dashboard"
+            :percentage="percentage"
+            :color="colors"
+          ></el-progress>
+          <span class="size-desc">{{
+            displaySize(parseInt(profile.usedSize)) +
+            " / " +
+            displaySize(parseInt(profile.totalSize))
+          }}</span>
         </div>
       </el-aside>
       <!-- 右侧主体区域 -->
       <el-main>
+        <!-- 对话框 -->
         <el-dialog title="用户信息" :visible.sync="dialogProfileVisible">
           <el-descriptions title="用户信息">
             <el-descriptions-item label="用户名">{{
@@ -168,6 +185,30 @@
             }}</el-descriptions-item>
           </el-descriptions>
         </el-dialog>
+        <el-dialog title="修改密码" :visible.sync="dialogModifyVisible" width="40%">
+          <el-form :model="modifyForm" :rules="modifyFormRules" ref="modifyForm" status-icon>
+          <el-form-item label="当前密码">
+              <el-input
+              placeholder="请输入当前密码"
+            v-model="modifyForm.oldPw"
+          >
+          </el-input>
+          </el-form-item>
+          <el-form-item label="新密码">
+            <el-input
+            placeholder="请输入新的密码"
+            v-model="modifyForm.newPw"
+            show-password
+          ></el-input>
+          </el-form-item>
+          <el-form-item>
+            <el-button @click="dialogModifyVisible = false">取消
+            </el-button>
+            <el-button type="primary" @click="modifyPw">提交
+            </el-button>
+          </el-form-item>
+          </el-form>
+        </el-dialog>
         <!-- 路由占位符 -->
         <router-view></router-view>
       </el-main>
@@ -178,6 +219,18 @@
 <script>
 export default {
   data() {
+    var validatePass = (rule, value, callback) => {
+      if (value === "") {
+        callback(new Error("请输入密码"));
+      } else if (value.length < 6) {
+        callback(new Error("长度需大于6"));
+      } else {
+        if (this.registerForm.repeat !== "") {
+          this.$refs.registerForm.validateField("repeat");
+        }
+        callback();
+      }
+    };
     return {
       // 以下为用户资料所需data
       profile: {
@@ -188,6 +241,14 @@ export default {
         fileUploadNum: "",
         usedSize: "",
         totalSize: "",
+      },
+      // 修改密码表单
+      modifyForm: {
+        oldPw: "",
+        newPw: "",
+      },
+      modifyFormRules: {
+        newPw: [{ validator: validatePass, trigger: "blur" }],
       },
       // 以下为全局搜索data
       // 搜索推荐
@@ -201,13 +262,13 @@ export default {
       // 被激活的链接地址
       activePath: "",
       dialogProfileVisible: false,
-      dialogSettingVisible: false,
+      dialogModifyVisible: false,
       percentage: 0,
       colors: [
-          {color: '#5cb87a', percentage: 40},
-          {color: '#e6a23c', percentage: 80},
-          {color: '#f56c6c', percentage: 100}
-        ]
+        { color: "#5cb87a", percentage: 40 },
+        { color: "#e6a23c", percentage: 80 },
+        { color: "#f56c6c", percentage: 100 },
+      ],
     };
   },
   created() {
@@ -243,7 +304,11 @@ export default {
           return this.$message.error(res.data.msg);
         } else {
           this.profile = res.data;
-          this.percentage = Math.round(parseInt(this.profile.usedSize) / parseInt(this.profile.totalSize) * 100)
+          this.percentage = Math.round(
+            (parseInt(this.profile.usedSize) /
+              parseInt(this.profile.totalSize)) *
+              100
+          );
           this.profile.userId = window.sessionStorage.getItem("userId");
         }
       });
@@ -320,8 +385,31 @@ export default {
         this.$router.push("/login");
       } else if (command === "profile") {
         this.dialogProfileVisible = true;
+      } else if (command === "modify") {
+        this.dialogModifyVisible = true;
       }
     },
+    modifyPw() {
+      const data = {
+        userId: this.profile.userId,
+        oldPw: this.modifyForm.oldPw,
+        newPw: this.modifyForm.newPw,
+      }
+      this.$http.post("auth/modify-pw", data).then((res) => {
+        if (res.status !== 200) {
+          return this.$message.error("服务器异常，请重试!");
+        } else if (res.data !== null && "code" in res.data) {
+          if (res.data.code === 10110) {
+            return this.$message.warn("当前密码输入错误，更改失败");
+          }
+          return this.$message.error(res.data.msg);
+        } else if (res.data !== null) {
+          this.getContentList();
+          this.dialogModifyVisible = false;
+          return this.$message.success("设置成功!");
+        }
+      });
+    }
   },
   mounted() {
     this.loadProfile();
@@ -379,9 +467,9 @@ export default {
   right: 20px;
 }
 .email-show-btn {
-    position: absolute;
-    top: 125px;
-    right: 260px;
+  position: absolute;
+  top: 125px;
+  right: 260px;
 }
 .size-desc {
   color: #fff;
