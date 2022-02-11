@@ -2,7 +2,7 @@
   <el-container class="home-container">
     <!-- 头部区域 -->
     <el-header class="header" name="home-header">
-      <span class="home-title">EasyDisk</span>
+      <img class="home-title" src="../assets/logo.png">
       <div class="global-search">
         <el-autocomplete
           v-model="query"
@@ -38,15 +38,12 @@
     <!-- 页面主体区域 -->
     <el-container>
       <!-- 侧边栏 -->
-      <el-aside :width="'180px'">
+      <el-aside :width="'170px'">
         <!-- 侧边栏菜单区域 -->
         <el-menu
-          background-color="#333744"
+          background-color="#2b4b6b"
           text-color="#fff"
-          active-text-color="#409eff"
-          unique-opened
           :collapse="false"
-          :collapse-transition="false"
           router
           :default-active="
             profile.userId + '/contents/' + encodeURIComponent('/')
@@ -79,7 +76,7 @@
               @click="saveNavState(profile.userId + '/pictures')"
             >
               <template slot="title">
-                <i class="el-icon-menu"></i>
+                <i class="el-icon-picture-outline"></i>
                 <span>图片</span>
               </template>
             </el-menu-item>
@@ -88,7 +85,7 @@
               @click="saveNavState(profile.userId + '/videos')"
             >
               <template slot="title">
-                <i class="el-icon-menu"></i>
+                <i class="el-icon-video-camera"></i>
                 <span>视频</span>
               </template>
             </el-menu-item>
@@ -97,7 +94,7 @@
               @click="saveNavState(profile.userId + '/musics')"
             >
               <template slot="title">
-                <i class="el-icon-menu"></i>
+                <i class="el-icon-headset"></i>
                 <span>音乐</span>
               </template>
             </el-menu-item>
@@ -106,26 +103,41 @@
               @click="saveNavState(profile.userId + '/documents')"
             >
               <template slot="title">
-                <i class="el-icon-menu"></i>
+                <i class="el-icon-notebook-1"></i>
                 <span>文件</span>
               </template>
             </el-menu-item>
-            <el-menu-item
-              :index="'/' + profile.userId + '/others'"
-              @click="saveNavState(profile.userId + '/others')"
-            >
-              <template slot="title">
-                <i class="el-icon-menu"></i>
-                <span>其他</span>
-              </template>
-            </el-menu-item>
           </el-submenu>
-          <el-menu-item :index="'/' + profile.userId + '/share'">
+          <el-submenu :index="'2'">
+            <!-- 一级菜单模板区域 -->
             <template slot="title">
               <i class="el-icon-connection"></i>
               <span>分享与转存</span>
             </template>
-          </el-menu-item>
+            <!-- 二级菜单 -->
+            <el-menu-item
+              :index="'/' + profile.userId + '/record'"
+              @click="
+                saveNavState(
+                  profile.userId + '/record'
+                )
+              "
+            >
+              <template slot="title">
+                <i class="el-icon-toilet-paper"></i>
+                <span>分享记录</span>
+              </template>
+            </el-menu-item>
+            <el-menu-item
+              :index="'/' + profile.userId + '/face-to-face-share'"
+              @click="saveNavState(profile.userId + '/face-to-face-share')"
+            >
+              <template slot="title">
+                <i class="el-icon-position"></i>
+                <span>面对面分享</span>
+              </template>
+            </el-menu-item>
+          </el-submenu>
           <el-menu-item :index="'/' + profile.userId + '/statistic'">
             <template slot="title">
               <i class="el-icon-s-data"></i>
@@ -272,8 +284,8 @@ export default {
     };
   },
   created() {
-    this.profile.userId = window.sessionStorage.getItem("userId");
-    this.activePath = window.sessionStorage.getItem("activePath");
+    this.profile.userId = localStorage.getItem("userId");
+    this.activePath = localStorage.getItem("activePath");
   },
   methods: {
     displaySize(size) {
@@ -292,7 +304,7 @@ export default {
     },
     // 保存链接的激活状态
     saveNavState(activePath) {
-      window.sessionStorage.setItem("activePath", activePath);
+      localStorage.setItem("activePath", activePath);
       this.activePath = activePath;
     },
     // 加载用户信息
@@ -309,7 +321,7 @@ export default {
               parseInt(this.profile.totalSize)) *
               100
           );
-          this.profile.userId = window.sessionStorage.getItem("userId");
+          this.profile.userId = localStorage.getItem("userId");
         }
       });
     },
@@ -380,7 +392,7 @@ export default {
     handleCommand(command) {
       if (command === "quit") {
         // 清空token
-        window.sessionStorage.clear();
+        localStorage.clear();
         // 跳转到登录页
         this.$router.push("/login");
       } else if (command === "profile") {
@@ -423,15 +435,17 @@ export default {
   height: 100%;
 }
 .el-header {
-  background-color: #373d41;
+  background: #2b4b6b;
+  color: #fff;
   display: flex;
   justify-content: space-between;
   padding-left: 0;
-  color: #fff;
   font-size: 20px;
+  height: 120px;
 }
 .el-aside {
-  background-color: #333744;
+  background: #2b4b6b;
+  color: #fff;
   .el-menu {
     border-right: none;
   }
@@ -442,24 +456,18 @@ export default {
 .iconfont {
   margin-right: 10px;
 }
-.toggle-button {
-  background-color: #1f2022;
-  font-size: 10px;
-  line-height: 24px;
-  color: #fff;
-  text-align: center;
-  letter-spacing: 0.2em;
-  cursor: pointer;
-}
+
 .global-search {
   position: absolute;
   top: 10px;
   right: 400px;
 }
 .home-title {
-  position: absolute;
-  top: 20px;
-  left: 30px;
+  display: inline-block;
+  margin: -1px;
+  width:200px;
+  height:60px;
+  border: none;
 }
 .user-profile {
   position: absolute;
@@ -472,18 +480,20 @@ export default {
   right: 260px;
 }
 .size-desc {
-  color: #fff;
   position: absolute;
-  font-size: 11px;
-  top: 120px;
-  right: 24px;
+  font-size: 12px;
+  top: 115px;
+  right: 20px;
 }
 .left-size {
   position: absolute;
   left: 20px;
-  bottom: 40px;
+  bottom: 20px;
 }
 /deep/ .el-progress__text {
-  color: #f3e388;
+  color: #fff;
+}
+.el-avatar {
+  background: #3399CC;
 }
 </style>

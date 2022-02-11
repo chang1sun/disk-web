@@ -3,7 +3,7 @@
     <div class="login_box">
       <!-- 头像区域 -->
       <div class="avatar_box">
-        <img src="../assets/logo.jpg" alt="" />
+        <img src="../assets/loginlogo.jpg" alt="" />
       </div>
       <!-- 登录表单区域 -->
       <el-form
@@ -119,9 +119,10 @@ export default {
         else if (res.data !== null && ('code' in res.data)) {
           return this.$message.error(res.data.msg);
         }
-        else {
+        else if (res.data !== null) {
           this.$message.success("登录成功!");
-          window.sessionStorage.setItem("userId", postForm.userId);
+          localStorage.setItem("userId", postForm.userId)
+          localStorage.setItem("token", res.data.token);
           this.$router.push('/' + postForm.userId + '/contents/' + encodeURIComponent('/'));
         }
       });

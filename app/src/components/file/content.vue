@@ -31,16 +31,16 @@
         >上传</el-button>
       <el-button
         type="primary"
-        icon="el-icon-circle-plus-outline"
+        icon="el-icon-folder-add"
         @click="mkdir()"
         >新建</el-button
       >
       <el-button type="primary" icon="el-icon-download" plain :disabled="multipleSelection.length === 0">下载</el-button>
-      <el-button type="primary" icon="el-icon-copy-document" plain :disabled="multipleSelection.length === 0">复制到...</el-button>
-      <el-button type="primary" icon="el-icon-thumb" plain :disabled="multipleSelection.length === 0">移动到...</el-button>
-      <el-button type="primary" icon="el-icon-open" plain :disabled="multipleSelection.length === 0">设为隐藏</el-button>
-      <el-button type="primary" icon="el-icon-turn-off" plain :disabled="multipleSelection.length === 0">取消隐藏</el-button>
-      <el-button type="danger" icon="el-icon-delete" :disabled="multipleSelection.length === 0">删除</el-button>
+      <el-button type="primary" icon="el-icon-copy-document" plain @click="copyMulDialogVisible = true" :disabled="multipleSelection.length === 0">复制到...</el-button>
+      <el-button type="primary" icon="el-icon-thumb" plain @click="moveMulDialogVisible = true" :disabled="multipleSelection.length === 0">移动到...</el-button>
+      <el-button type="primary" icon="el-icon-open" plain @click="setHiddenDocInBatch(1)" :disabled="multipleSelection.length === 0">设为隐藏</el-button>
+      <el-button type="primary" icon="el-icon-turn-off" plain @click="setHiddenDocInBatch(2)" :disabled="multipleSelection.length === 0">取消隐藏</el-button>
+      <el-button type="danger" icon="el-icon-delete" @click="moveToRecycleBinInBatch()" :disabled="multipleSelection.length === 0">删除</el-button>
     </el-button-group>
     <el-switch
       v-model="showHide"
@@ -55,7 +55,7 @@
       :data="content"
       tooltip-effect="dark"
       style="width: 1200px"
-      max-height="500"
+      max-height="550"
       @selection-change="handleSelectionChange"
       :default-sort="{ prop: 'isDir', order: 'ascending' }"
       v-loading="contentLoading"
@@ -64,7 +64,7 @@
       <el-table-column
         prop="isDir"
         label="类型"
-        width="100"
+        width="70"
         :filters="[
           { text: '文件', value: 2 },
           { text: '文件夹', value: 1 },
@@ -73,11 +73,10 @@
         filter-placement="bottom-end"
       >
         <template slot-scope="scope">
-          <el-tag
-            :type="scope.row.isDir === 1 ? 'primary' : 'success'"
-            disable-transitions
-            >{{ scope.row.isDir === 2 ? "文件" : "文件夹" }}</el-tag
-          >
+          <span style="font-size: 16px">
+            <i v-if="scope.row.isDir === 1" class="el-icon-folder-opened el-icon--right"></i>
+            <i v-else class="el-icon-document el-icon--right"></i>
+          </span>
         </template>
       </el-table-column>
       <el-table-column prop="docName" label="文件名" width="500" sortable>
@@ -130,7 +129,7 @@
               </span>
               <el-dropdown-menu slot="dropdown">
                 <el-dropdown-item>下载</el-dropdown-item>
-                <el-dropdown-item>重命名</el-dropdown-item>
+                <el-dropdown-item @click.native="rename(scope.row.docId)">重命名</el-dropdown-item>
                 <el-dropdown-item
                   @click.native="moveToRecycleBin([scope.row.docId])"
                   >删除</el-dropdown-item
@@ -152,7 +151,7 @@
     </el-table>
     <!-- 对话框 -->
     <el-dialog
-      name="copy-dialog"
+      name="single-copy-dialog"
       title="复制"
       :visible.sync="copyDialogVisible"
       width="40%"
@@ -168,7 +167,23 @@
       </el-tree>
     </el-dialog>
     <el-dialog
-      name="move-dialog"
+      name="multiple-copy-dialog"
+      title="复制"
+      :visible.sync="copyMulDialogVisible"
+      width="40%"
+      :before-close="handleDialogClose"
+    >
+      <el-tree
+        :props="tree.defaultProps"
+        :load="loadNode"
+        node-key="id"
+        lazy
+        @node-click="copyToPathInBatch"
+      >
+      </el-tree>
+    </el-dialog>
+    <el-dialog
+      name="single-move-dialog"
       title="移动"
       :visible.sync="moveDialogVisible"
       width="40%"
@@ -180,6 +195,22 @@
         node-key="id"
         lazy
         @node-click="moveToPath"
+      >
+      </el-tree>
+    </el-dialog>
+    <el-dialog
+      name="multiple-move-dialog"
+      title="移动"
+      :visible.sync="moveMulDialogVisible"
+      width="40%"
+      :before-close="handleDialogClose"
+    >
+      <el-tree
+        :props="tree.defaultProps"
+        :load="loadNode"
+        node-key="id"
+        lazy
+        @node-click="moveToPathInBatch"
       >
       </el-tree>
     </el-dialog>
@@ -234,8 +265,11 @@ export default {
       multipleSelection: [], // 用户选中
       showHide: false, // 展示隐藏文件 & 文件夹
       contentLoading: true, // 是否正在载入
+      // 对话框显示控制
       copyDialogVisible: false,
+      copyMulDialogVisible: false,
       moveDialogVisible: false,
+      moveMulDialogVisible: false,
       // 树形控件
       tree: {
         defaultProps: {
@@ -255,7 +289,7 @@ export default {
     };
   },
   created() {
-    this.userId = window.sessionStorage.getItem("userId");
+    this.userId = localStorage.getItem("userId");
     this.getContentList();
   },
   watch: {
@@ -391,8 +425,33 @@ export default {
         }
       });
     },
+    setHiddenDocInBatch(hideStatus) {
+      let ids = this.multipleSelection.map((a) => a.docId);
+      const data = {
+        userId: this.userId,
+        ids: ids,
+        hideStatus: hideStatus,
+      };
+      this.$http.post("files/set-hidden", data).then((res) => {
+        if (res.status !== 200) {
+          return this.$message.error("服务器异常，请重试!");
+        } else if (res.data !== null && "code" in res.data) {
+          if (res.data.code === 20201) {
+            return this.$message.warn("参数错误，请检查输入或刷新重试");
+          } else if (res.data.code === 20202) {
+            return this.$message.error(
+              "修改数目与实际传入数不符，请再次检查文件列表"
+            );
+          }
+          return this.$message.error(res.data.msg);
+        } else if (res.data !== null) {
+          this.getContentList();
+          return this.$message.success("设置成功!");
+        }
+      });
+    },
     rename(docId) {
-      this.$prompt("请输入更改为的名字: ", "重命名", {
+      this.$prompt("请输入新名字: ", "重命名", {
         confirmButtonText: "确定",
         cancelButtonText: "取消",
       })
@@ -508,7 +567,7 @@ export default {
               }
               return this.$message.error(res.data.msg);
             } else if (res.data !== null) {
-              this.moveDialogVisible = false;
+              this.moveMulDialogVisible = false;
               this.getContentList();
               return this.$message.success("已成功移动至选定路径!");
             }
@@ -516,7 +575,7 @@ export default {
         })
         .catch(() => {});
     },
-    copyToPath(data, node, item) {
+    copyToPath(data, node, item, params) {
       this.$confirm("将该文件或文件夹复制到所选路径下吗?", "提示", {
         confirmButtonText: "确定",
         cancelButtonText: "取消",
@@ -573,7 +632,7 @@ export default {
               }
               return this.$message.error(res.data.msg);
             } else if (res.data !== null) {
-              this.copyDialogVisible = false;
+              this.copyMulDialogVisible = false;
               this.getContentList();
               return this.$message.success("已成功复制!");
             }
@@ -609,10 +668,46 @@ export default {
               }
               return this.$message.error(res.data.msg);
             } else if (res.data !== null) {
+              this.getContentList();
               return this.$message.success("已成功删除!");
             }
           });
-          this.getContentList();
+        })
+        .catch(() => {});
+    },
+    moveToRecycleBinInBatch() {
+      this.$confirm(
+        "删除选中文件将把其放入回收站中，我们最多可以为您保存七天, 是否继续?",
+        "提示",
+        {
+          confirmButtonText: "确定",
+          cancelButtonText: "取消",
+          type: "warning",
+        }
+      )
+        .then(() => {
+          let ids = this.multipleSelection.map((a) => a.docId);
+          const data = {
+            userId: this.userId,
+            ids: ids,
+          };
+          this.$http.post("files/recycle", data).then((res) => {
+            if (res.status !== 200) {
+              return this.$message.error("服务器异常，请重试!");
+            } else if (res.data !== null && "code" in res.data) {
+              if (res.data.code === 20201) {
+                return this.$message.warn("参数错误，请检查输入或刷新重试");
+              } else if (res.data.code === 20202) {
+                return this.$message.error(
+                  "删除数目与实际传入数不符，请再次检查文件列表"
+                );
+              }
+              return this.$message.error(res.data.msg);
+            } else if (res.data !== null) {
+              this.getContentList();
+              return this.$message.success("已成功删除!");
+            }
+          });
         })
         .catch(() => {});
     },

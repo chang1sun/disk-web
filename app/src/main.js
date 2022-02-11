@@ -25,8 +25,8 @@ axios.defaults.baseURL = 'http://127.0.0.1:8001/v1/'
 // 设置axios请求拦截器
 axios.interceptors.request.use(config => {
   NProgress.start()
-  config.headers.Authorization = window.sessionStorage.getItem('token')
-  // console.log(config)
+  config.headers.Authorization = localStorage.getItem('token')
+  console.log(config)
   return config
 })
 // 在 response 拦截器中，隐藏进度条 NProgress.done()

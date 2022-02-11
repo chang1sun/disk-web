@@ -1,15 +1,15 @@
 import Vue from 'vue'
 import VueRouter from 'vue-router'
-// import Login from '../components/Login.vue'
-// import Home from '../components/Home.vue'
-// import Welcome from '../components/Welcome.vue'
 
-// 实现路由懒加载
+
+// 路由懒加载
 const Login = () => import('../views/login.vue')
 const Register = () => import('../views/register.vue')
 const Forget = () => import('../views/forget.vue')
 const Home = () => import('../views/home.vue')
 const Content = () => import('../components/file/content.vue')
+const Recycle = () => import('../components/file/recycle.vue')
+const Record = () => import('../components/file/record.vue')
 
 Vue.use(VueRouter)
 
@@ -23,6 +23,8 @@ const routes = [
     component: Home,
     children: [
       {path: 'contents/:path', component: Content},
+      {path: 'recycle-bin', component: Recycle},
+      {path: 'record', component: Record},
     ]
   }
 ]
@@ -33,13 +35,10 @@ const router = new VueRouter({
 
 // 挂载路由导航守卫
 router.beforeEach((to, from, next) => {
-  // to and from are Route Object,next() must be called to resolve the hook}
-  // to将要访问的路径 from代表从哪个路径跳转而来
-  // next 是一个函数，表示放行 next() 放行 next('/login') 强制跳转到登录页面
-  // 如果是登录页，直接放行即可
   if (to.path === '/login' || to.path === '/register' || to.path === '/forget') return next()
   // 获取token
-  const tokenStr = window.sessionStorage.getItem('userId')
+  console.log(localStorage.getItem('token'))
+  const tokenStr = localStorage.getItem('token')
   if (!tokenStr) return next('/login')
   next()
 })
