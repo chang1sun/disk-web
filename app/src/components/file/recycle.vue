@@ -294,7 +294,7 @@ export default {
     },
   },
   created() {
-    this.userId = localStorage.getItem("userId");
+    this.userId = window.localStorage.getItem("userId");
     this.getRecycleList();
   },
 };

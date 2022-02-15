@@ -121,9 +121,9 @@ export default {
         }
         else if (res.data !== null) {
           this.$message.success("登录成功!");
-          localStorage.setItem("userId", postForm.userId)
-          localStorage.setItem("token", res.data.token);
-          this.$router.push('/' + postForm.userId + '/contents/' + encodeURIComponent('/'));
+          window.localStorage.setItem("userId", postForm.userId)
+          window.localStorage.setItem("token", res.data.token);
+          this.$router.push('/home/contents/' + encodeURIComponent('/'));
         }
       });
     },

@@ -1,145 +1,60 @@
 <template>
-  <el-container class="content-container">
-    <el-breadcrumb separator="/">
-      <el-breadcrumb-item
-        :to="{
-          path: '/home/contents/' + encodeURIComponent('/'),
-        }"
-        >根目录</el-breadcrumb-item
-      >
-      <el-breadcrumb-item
-        v-for="(pos, index) in getPathArray()"
-        :key="index"
-        :to="{
-          path:
-            '/' +
-            userId +
-            '/contents/' +
-            encodeURIComponent(
-              '/' +
-                getPathArray()
-                  .slice(0, index + 1)
-                  .join('/') +
-                '/'
-            ),
-        }"
-        >{{ pos }}</el-breadcrumb-item
-      >
-    </el-breadcrumb>
-    <el-button-group class="btn-group-up">
+  <el-container class="class-container">
+    <el-button-group class="btn-group">
+      <el-button type="primary" icon="el-icon-upload" @click="uploadDialogVisible = true"
+        >上传</el-button>
       <el-button
         type="primary"
-        icon="el-icon-upload"
-        @click="uploadDialogVisible = true"
-        >上传</el-button
-      >
-      <el-button type="primary" icon="el-icon-folder-add" @click="mkdir()"
+        icon="el-icon-folder-add"
+        @click="mkdir()"
         >新建</el-button
       >
-      <el-button
-        type="primary"
-        icon="el-icon-download"
-        plain
-        :disabled="multipleSelection.length === 0"
-        >下载</el-button
-      >
-      <el-button
-        type="primary"
-        icon="el-icon-copy-document"
-        plain
-        @click="copyMulDialogVisible = true"
-        :disabled="multipleSelection.length === 0"
-        >复制到...</el-button
-      >
-      <el-button
-        type="primary"
-        icon="el-icon-thumb"
-        plain
-        @click="moveMulDialogVisible = true"
-        :disabled="multipleSelection.length === 0"
-        >移动到...</el-button
-      >
-      <el-button
-        type="primary"
-        icon="el-icon-open"
-        plain
-        @click="setHiddenDocInBatch(1)"
-        :disabled="multipleSelection.length === 0"
-        >设为隐藏</el-button
-      >
-      <el-button
-        type="primary"
-        icon="el-icon-turn-off"
-        plain
-        @click="setHiddenDocInBatch(2)"
-        :disabled="multipleSelection.length === 0"
-        >取消隐藏</el-button
-      >
-      <el-button
-        type="danger"
-        icon="el-icon-delete"
-        @click="moveToRecycleBinInBatch()"
-        :disabled="multipleSelection.length === 0"
-        >删除</el-button
-      >
+      <el-button type="primary" icon="el-icon-download" plain :disabled="multipleSelection.length === 0">下载</el-button>
+      <el-button type="primary" icon="el-icon-copy-document" plain @click="copyMulDialogVisible = true" :disabled="multipleSelection.length === 0">复制到...</el-button>
+      <el-button type="primary" icon="el-icon-thumb" plain @click="moveMulDialogVisible = true" :disabled="multipleSelection.length === 0">移动到...</el-button>
+      <el-button type="primary" icon="el-icon-open" plain @click="setHiddenDocInBatch(1)" :disabled="multipleSelection.length === 0">设为隐藏</el-button>
+      <el-button type="primary" icon="el-icon-turn-off" plain @click="setHiddenDocInBatch(2)" :disabled="multipleSelection.length === 0">取消隐藏</el-button>
+      <el-button type="danger" icon="el-icon-delete" @click="moveToRecycleBinInBatch()" :disabled="multipleSelection.length === 0">删除</el-button>
     </el-button-group>
-    <el-switch
-      v-model="showHide"
-      active-text="显示隐藏文件夹"
-      class="show-hide-switch"
-    >
-    </el-switch>
+    <div class="class-table">
     <el-table
-      :key="contentTableKey"
-      class="content-table"
+      :key="classTableKey"
+      class="table-data"
       ref="multipleTable"
-      :data="content"
+      :data="classList"
+      style="height: 100%; width: 1150px"
       tooltip-effect="dark"
-      style="width: 1200px"
-      max-height="550"
+      v-el-table-infinite-scroll="load"
+      infinite-scroll-disabled="disableLoading"
+      infinite-scroll-immediate="false"
       @selection-change="handleSelectionChange"
-      :default-sort="{ prop: 'isDir', order: 'ascending' }"
-      v-loading="contentLoading"
+      :default-sort="{ prop: 'updateAt', order: 'descending' }"
+      v-loading="classLoading"
     >
       <el-table-column type="selection" width="55"> </el-table-column>
-      <el-table-column
-        prop="isDir"
-        label="类型"
-        width="70"
-        :filters="[
-          { text: '文件', value: 2 },
-          { text: '文件夹', value: 1 },
-        ]"
-        :filter-method="filterHandler"
-        filter-placement="bottom-end"
-      >
-        <template slot-scope="scope">
-          <span style="font-size: 16px">
-            <i
-              v-if="scope.row.isDir === 1"
-              class="el-icon-folder-opened el-icon--right"
-            ></i>
-            <i v-else class="el-icon-document el-icon--right"></i>
-          </span>
-        </template>
-      </el-table-column>
       <el-table-column prop="docName" label="文件名" width="500" sortable>
         <template slot-scope="scope">
-          <span v-if="scope.row.isDir === 2" style="font-size: 14px">{{
-            scope.row.docName
-          }}</span>
-          <el-button
-            v-else
-            type="text"
-            @click="enterFolder(scope.row.docName)"
-            >{{ scope.row.docName }}</el-button
-          >
+          <span style="font-size: 14px">{{ scope.row.docName }}</span>
+        </template>
+      </el-table-column>
+      <el-table-column prop="docPath" label="路径" width="500" sortable>
+        <template slot-scope="scope">
+          <span style="font-size: 14px">{{ scope.row.docPath }}</span>
         </template>
       </el-table-column>
       <el-table-column prop="docSize" label="大小" width="100" sortable>
         <template slot-scope="scope">{{
-          displaySize(scope.row.fileSize)
+          displaySize(scope.row.docSize)
         }}</template>
+      </el-table-column>
+      <el-table-column
+        prop="updateAt"
+        label="创建日期"
+        show-overflow-tooltip
+        width="180"
+        sortable
+      >
+        <template slot-scope="scope">{{ scope.row.updateAt }}</template>
       </el-table-column>
       <el-table-column
         prop="updateAt"
@@ -175,9 +90,7 @@
               </span>
               <el-dropdown-menu slot="dropdown">
                 <el-dropdown-item>下载</el-dropdown-item>
-                <el-dropdown-item @click.native="rename(scope.row.docId)"
-                  >重命名</el-dropdown-item
-                >
+                <el-dropdown-item @click.native="rename(scope.row.docId)">重命名</el-dropdown-item>
                 <el-dropdown-item
                   @click.native="moveToRecycleBin([scope.row.docId])"
                   >删除</el-dropdown-item
@@ -191,22 +104,14 @@
                   @click.native="setHiddenDoc([scope.row.docId], 2)"
                   >取消隐藏</el-dropdown-item
                 >
-                <el-dropdown-item
-                  divided
-                  @click.native="showCreateShareDialog(scope.row)"
-                  >分享</el-dropdown-item
-                >
-                <el-dropdown-item disabled>面对面分享</el-dropdown-item>
               </el-dropdown-menu>
             </el-dropdown>
           </div>
         </template>
       </el-table-column>
     </el-table>
-    <!-- 以下是对话框 -->
-    <!--  -->
-    <!-- 复制提示对话框 -->
-    <!--  -->
+    </div>
+    <!-- 对话框 -->
     <el-dialog
       name="single-copy-dialog"
       title="复制"
@@ -239,9 +144,6 @@
       >
       </el-tree>
     </el-dialog>
-    <!--  -->
-    <!-- 移动文件提示对话框 -->
-    <!--  -->
     <el-dialog
       name="single-move-dialog"
       title="移动"
@@ -274,9 +176,6 @@
       >
       </el-tree>
     </el-dialog>
-    <!--  -->
-    <!-- 上传对话框 -->
-    <!--  -->
     <el-dialog
       name="upload-dialog"
       title="上传文件"
@@ -311,105 +210,29 @@
         ></el-progress>
       </div>
     </el-dialog>
-    <!--  -->
-    <!-- 创建分享对话框 -->
-    <!--  -->
-    <el-dialog
-      name="create-share-dialog"
-      :title="'为' + singleSelection.docName + '创建分享'"
-      :visible.sync="createShareDialogVisible"
-      width="50%"
-      :before-close="handleDialogClose"
-    >
-      <el-form :inline="true" :model="share" class="create-share-form">
-        <el-form-item label="分享者">
-          <el-input v-model="userId" placeholder="上传用户" readonly></el-input>
-        </el-form-item>
-        <el-form-item label="有效时长">
-          <el-input v-model="share.expireVal" class="input-with-select" style="width: 160px;">
-            <el-select
-              v-model="share.expireUnit"
-              slot="append"
-              placeholder="天"
-              style="width: 60px;"
-            >
-              <el-option label="时" value="1"></el-option>
-              <el-option label="天" value="2"></el-option>
-              <el-option label="周" value="3"></el-option>
-              <el-option label="月" value="4"></el-option>
-            </el-select>
-          </el-input>
-        </el-form-item>
-        <el-form-item>
-          <el-button type="primary" @click="createShare()">创建</el-button>
-        </el-form-item>
-      </el-form>
-    </el-dialog>
-    <!--  -->
-    <!-- 生成分享成功对话框 -->
-    <!--  -->
-    <el-dialog
-      name="create-share-success-dialog"
-      title="提示"
-      :visible.sync="createShareSuccessDialogVisible"
-      width="50%"
-      :before-close="handleDialogClose"
-    >
-      <el-skeleton :rows="3" animated v-if="createShareLoading" />
-      <div v-else>
-        <el-result
-          icon="success"
-          title="创建分享成功"
-          subTitle="您可以点击下方按钮复制分享链接与提取码"
-        ></el-result>
-        <el-form :model="share" class="create-share-success-form">
-          <el-form-item label="分享链接">
-            <el-input v-model="share.url" readonly></el-input>
-          </el-form-item>
-          <el-form-item label="提取码">
-            <el-input v-model="share.password" readonly></el-input>
-          </el-form-item>
-          <el-form-item>
-            <el-button type="info" @click="copyShareToClipboard()"
-              >一键复制分享链接</el-button
-            >
-          </el-form-item>
-        </el-form>
-      </div>
-    </el-dialog>
   </el-container>
 </template>
+
 <script>
 import SparkMD5 from "spark-md5";
 export default {
   data() {
     return {
-      userId: "",
-      queryInfo: {
-        keyword: "",
-      },
-      content: [],
-      contentTableKey: null,
-      singleSelection: {},
-      multipleSelection: [], // 用户选中
-      showHide: false, // 展示隐藏文件 & 文件夹
-      contentLoading: true, // 是否正在载入
-      createShareLoading: true, // 创建分享响应加载
+      userId: '',
+      curPage: 0,
+      pageSize: 8,
+      class: 0,
+      classList: [],
+      classLoading: false,
+      classTableKey: null,
+      disableLoading: false,
+      singleSelection: null,
+      multipleSelection: [],
       // 对话框显示控制
       copyDialogVisible: false,
       copyMulDialogVisible: false,
       moveDialogVisible: false,
       moveMulDialogVisible: false,
-      createShareDialogVisible: false,
-      createShareSuccessDialogVisible: false,
-      // 分享相关
-      share: {
-        expireVal: 7,
-        expireUnit: "2",
-        token: "",
-        password: "",
-        url: "",
-      },
       // 树形控件
       tree: {
         defaultProps: {
@@ -428,17 +251,21 @@ export default {
       chunkSize: 1024 * 1024 * 50, // 分块大小：50Mb
     };
   },
-  created() {
-    this.userId = window.localStorage.getItem("userId");
-    this.getContentList();
-  },
   watch: {
     // 如果路由有变化，会再次执行该方法
-    $route: "getContentList",
-    // 监听显示隐藏文件夹开关
-    showHide: "getContentList",
+    $route: "refreshClassList"
+  },
+  computed: {
   },
   methods: {
+    load() {
+      //滑到底部时进行加载
+      this.classLoading = true;
+      setTimeout(() => {
+        this.curPage += 1; //页数+1
+        this.getClassList(); //调用接口，此时页数+1，查询下一页数据
+      }, 2000);
+    },
     displaySize(size) {
       if (size === 0 || !size) {
         return "";
@@ -449,36 +276,66 @@ export default {
         return String((size / 1048576).toFixed(1)) + "MB";
       else return String((size / 1073741824).toFixed(1)) + "GB";
     },
-    clearFilter() {
-      this.$refs.contentTable.clearFilter();
-    },
-    filterHandler(value, row) {
-      return row.isDir === value;
-    },
-    getPathString() {
-      return decodeURIComponent(this.$route.params.path);
-    },
-    getPathArray() {
-      var arr = this.getPathString().split("/");
-      return arr.slice(1, arr.length);
-    },
-    async getContentList() {
+    async getClassList() {
+      const params = {
+        type: this.class,
+        offset: this.curPage * this.pageSize,
+        limit: this.pageSize,
+      };
       await this.$http
-        .get(this.userId + "/files", {
-          params: { path: this.$route.params.path, show_hide: this.showHide },
-        })
+        .get(this.userId + "/files/classified", {params: params})
         .then((res) => {
           if (res.status !== 200)
             return this.$message.error("请求服务器异常，请重试!");
           else if (res.data !== null && "code" in res.data) {
             return this.$message.error(res.data.msg);
-          } else {
-            this.contentLoading = false;
-            this.contentTableKey = Math.random();
-            this.content = res.data.details;
+          } else if (res.data !== null) {
+            if (res.data.list.length === 0) {
+              this.disableLoading = true;
+              this.$message.info("没有更多了");
+            }
+            this.classLoading = false;
+            this.classTableKey = Math.random();
+            this.classList = this.classList.concat(res.data.list);
           }
         });
     },
+    async refreshClassList() {
+      this.getRouteClass();
+      this.classLoading = true;
+      this.curPage = 0;
+      const params = {
+        type: this.class,
+        offset: this.curPage * this.pageSize,
+        limit: this.pageSize,
+      };
+      await this.$http
+        .get(this.userId + "/files/classified", {params: params})
+        .then((res) => {
+          if (res.status !== 200)
+            return this.$message.error("请求服务器异常，请重试!");
+          else if (res.data !== null && "code" in res.data) {
+            return this.$message.error(res.data.msg);
+          } else if (res.data !== null) {
+            if (res.data.list.length === 0) {
+              this.disableLoading = true;
+              this.$message.info("没有更多了");
+            }
+            this.classLoading = false;
+            this.classTableKey = Math.random();
+            this.classList = res.data.list;
+          }
+        });
+    },
+    // 初始页currentPage、初始每页数据数pagesize和数据data
+    handleSizeChange(size) {
+        this.pageSize = size
+        console.log(this.pageSize)  //每页下拉显示数据
+      },
+    handleCurrentChange(curPage) {
+        this.curPage = curPage
+        console.log(this.curPage)  //点击第几页
+      },
     toggleSelection(rows) {
       if (rows) {
         rows.forEach((row) => {
@@ -504,50 +361,6 @@ export default {
     showMoveDialog(data) {
       this.moveDialogVisible = true;
       this.singleSelection = data;
-    },
-    showCreateShareDialog(data) {
-      this.createShareDialogVisible = true;
-      this.singleSelection = data;
-    },
-    async createShare() {
-      this.createShareDialogVisible = false;
-      this.createShareSuccessDialogVisible = true;
-      this.createShareLoading = true;
-      const data = {
-        userId: this.userId,
-        docId: this.singleSelection.docId,
-        expireHour: this.convertExpireVal(),
-      };
-      await this.$http.post("files/create-share", data).then((res) => {
-        if (res.status !== 200) {
-          return this.$message.error("服务器异常，请重试!");
-        } else if (res.data !== null && "code" in res.data) {
-          return this.$message.error(res.data.msg);
-        } else if (res.data !== null) {
-          this.share.token = res.data.token;
-          this.share.password = res.data.password;
-          this.share.url = "http://localhost:8080/share/" + res.data.token;
-          this.createShareLoading = false;
-        }
-      });
-    },
-    convertExpireVal() {
-      const val = parseInt(this.share.expireVal);
-      switch (this.share.expireUnit) {
-        case "1":
-          return val;
-        case "2":
-          return val * 24;
-        case "3":
-          return val * 24 * 7;
-        case "4":
-          return val * 24 * 30;
-      }
-    },
-    copyShareToClipboard() {
-      navigator.clipboard.writeText(this.userId + '给你分享了一个文件' + '，快打开看看吧！'
-      + '链接：' + this.share.url + '，提取码：' + this.share.password);
-      this.$message.success('复制成功！')
     },
     loadNode(node, resolve) {
       if (node.level === 0) {
@@ -614,33 +427,31 @@ export default {
         confirmButtonText: "确定",
         cancelButtonText: "取消",
         type: "info",
-      })
-        .then(() => {
-          let ids = this.multipleSelection.map((a) => a.docId);
-          const data = {
-            userId: this.userId,
-            ids: ids,
-            hideStatus: hideStatus,
-          };
-          this.$http.post("files/set-hidden", data).then((res) => {
-            if (res.status !== 200) {
-              return this.$message.error("服务器异常，请重试!");
-            } else if (res.data !== null && "code" in res.data) {
-              if (res.data.code === 20201) {
-                return this.$message.warn("参数错误，请检查输入或刷新重试");
-              } else if (res.data.code === 20202) {
-                return this.$message.error(
-                  "修改数目与实际传入数不符，请再次检查文件列表"
-                );
-              }
-              return this.$message.error(res.data.msg);
-            } else if (res.data !== null) {
-              this.getContentList();
-              return this.$message.success("设置成功!");
-            }
-          });
-        })
-        .catch(() => {});
+      }).then(() => {
+        let ids = this.multipleSelection.map((a) => a.docId);
+        const data = {
+        userId: this.userId,
+        ids: ids,
+        hideStatus: hideStatus,
+      };
+      this.$http.post("files/set-hidden", data).then((res) => {
+        if (res.status !== 200) {
+          return this.$message.error("服务器异常，请重试!");
+        } else if (res.data !== null && "code" in res.data) {
+          if (res.data.code === 20201) {
+            return this.$message.warn("参数错误，请检查输入或刷新重试");
+          } else if (res.data.code === 20202) {
+            return this.$message.error(
+              "修改数目与实际传入数不符，请再次检查文件列表"
+            );
+          }
+          return this.$message.error(res.data.msg);
+        } else if (res.data !== null) {
+          this.getContentList();
+          return this.$message.success("设置成功!");
+        }
+      });
+      }).catch(() => {})
     },
     rename(docId) {
       this.$prompt("请输入新名字: ", "重命名", {
@@ -1090,37 +901,36 @@ export default {
     beforeRemove(file, fileList) {
       return this.$confirm(`确定移除 ${file.name}？`);
     },
+    getRouteClass() {
+      console.log(this.$route.params.class);
+      switch (this.$route.params.class) {
+        case "pictures": {this.class = 1; break;}
+        case "videos": {this.class = 2; break;}
+        case "musics": {this.class = 3; break;}
+        case "documents": {this.class = 4; break;}
+        default: {
+          this.$message.error("错误的文件分类")
+        }
+      }
+      console.log(this.class);
+    },
   },
-  mounted() {},
+  created() {
+    this.userId = window.localStorage.getItem("userId");
+    this.refreshClassList();
+  },
 };
 </script>
-<style lang="less" scoped>
-.btn-group-up {
+
+<style scoped>
+.btn-group {
   position: fixed;
-  left: 230px;
-  top: 110px;
+  left: 210px;
+  top: 90px;
 }
-.content-table {
+.class-table {
   position: fixed;
-  left: 230px;
-  top: 170px;
-}
-.show-hide-switch {
-  position: absolute;
-  right: 100px;
-  top: 120px;
-}
-.op-more {
-  font-size: 12px;
-}
-.el-dropdown-link {
-  cursor: pointer;
-  color: #409eff;
-}
-.el-icon-arrow-down {
-  font-size: 12px;
-}
-/deep/.el-input-group__append {
-  background-color: #fff;
+  left: 210px;
+  top: 150px;
 }
 </style>

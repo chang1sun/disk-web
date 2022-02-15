@@ -13,10 +13,12 @@ import './assets/fonts/iconfont.css'
 // 导入NProgress包对应的js和css
 import NProgress from 'nprogress'
 import 'nprogress/nprogress.css'
+import elTableInfiniteScroll from 'el-table-infinite-scroll';
 
 Vue.config.productionTip = false
 
 Vue.use(ElementUI);
+Vue.use(elTableInfiniteScroll);
 
 // 配置请求的根路径
 axios.defaults.baseURL = 'http://127.0.0.1:8001/v1/'
@@ -25,7 +27,7 @@ axios.defaults.baseURL = 'http://127.0.0.1:8001/v1/'
 // 设置axios请求拦截器
 axios.interceptors.request.use(config => {
   NProgress.start()
-  config.headers.Authorization = localStorage.getItem('token')
+  config.headers.Authorization = window.localStorage.getItem('token')
   console.log(config)
   return config
 })

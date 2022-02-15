@@ -46,7 +46,7 @@
           :collapse="false"
           router
           :default-active="
-            profile.userId + '/contents/' + encodeURIComponent('/')
+            '/home/contents/' + encodeURIComponent('/')
           "
         >
           <el-submenu :index="'1'">
@@ -58,11 +58,11 @@
             <!-- 二级菜单 -->
             <el-menu-item
               :index="
-                '/' + profile.userId + '/contents/' + encodeURIComponent('/')
+                '/home/contents/' + encodeURIComponent('/')
               "
               @click="
                 saveNavState(
-                  profile.userId + '/contents/' + encodeURIComponent('/')
+                  '/home/contents/' + encodeURIComponent('/')
                 )
               "
             >
@@ -72,8 +72,8 @@
               </template>
             </el-menu-item>
             <el-menu-item
-              :index="'/' + profile.userId + '/pictures'"
-              @click="saveNavState(profile.userId + '/pictures')"
+              :index="'/home/class/pictures'"
+              @click="saveNavState('/home/class/pictures')"
             >
               <template slot="title">
                 <i class="el-icon-picture-outline"></i>
@@ -81,8 +81,8 @@
               </template>
             </el-menu-item>
             <el-menu-item
-              :index="'/' + profile.userId + '/videos'"
-              @click="saveNavState(profile.userId + '/videos')"
+              :index="'/home/class/videos'"
+              @click="saveNavState('/home/class/videos')"
             >
               <template slot="title">
                 <i class="el-icon-video-camera"></i>
@@ -90,8 +90,8 @@
               </template>
             </el-menu-item>
             <el-menu-item
-              :index="'/' + profile.userId + '/musics'"
-              @click="saveNavState(profile.userId + '/musics')"
+              :index="'/home/class/musics'"
+              @click="saveNavState('/home/class/musics')"
             >
               <template slot="title">
                 <i class="el-icon-headset"></i>
@@ -99,8 +99,8 @@
               </template>
             </el-menu-item>
             <el-menu-item
-              :index="'/' + profile.userId + '/documents'"
-              @click="saveNavState(profile.userId + '/documents')"
+              :index="'/home/class/documents'"
+              @click="saveNavState('/home/class/documents')"
             >
               <template slot="title">
                 <i class="el-icon-notebook-1"></i>
@@ -116,10 +116,10 @@
             </template>
             <!-- 二级菜单 -->
             <el-menu-item
-              :index="'/' + profile.userId + '/record'"
+              :index="'/home/record'"
               @click="
                 saveNavState(
-                  profile.userId + '/record'
+                  '/home/record'
                 )
               "
             >
@@ -129,8 +129,8 @@
               </template>
             </el-menu-item>
             <el-menu-item
-              :index="'/' + profile.userId + '/face-to-face-share'"
-              @click="saveNavState(profile.userId + '/face-to-face-share')"
+              :index="'/home/face-to-face-share'"
+              @click="saveNavState('/home/face-to-face-share')"
             >
               <template slot="title">
                 <i class="el-icon-position"></i>
@@ -138,13 +138,13 @@
               </template>
             </el-menu-item>
           </el-submenu>
-          <el-menu-item :index="'/' + profile.userId + '/statistic'">
+          <el-menu-item :index="'/home/statistic'">
             <template slot="title">
               <i class="el-icon-s-data"></i>
               <span>统计与分析</span>
             </template>
           </el-menu-item>
-          <el-menu-item :index="'/' + profile.userId + '/recycle-bin'">
+          <el-menu-item :index="'/home/recycle-bin'">
             <template slot="title">
               <i class="el-icon-delete"></i>
               <span>回收站</span>
@@ -284,8 +284,8 @@ export default {
     };
   },
   created() {
-    this.profile.userId = localStorage.getItem("userId");
-    this.activePath = localStorage.getItem("activePath");
+    this.profile.userId = window.localStorage.getItem("userId");
+    this.activePath = window.localStorage.getItem("activePath");
   },
   methods: {
     displaySize(size) {
@@ -304,7 +304,7 @@ export default {
     },
     // 保存链接的激活状态
     saveNavState(activePath) {
-      localStorage.setItem("activePath", activePath);
+      window.localStorage.setItem("activePath", activePath);
       this.activePath = activePath;
     },
     // 加载用户信息
@@ -321,7 +321,7 @@ export default {
               parseInt(this.profile.totalSize)) *
               100
           );
-          this.profile.userId = localStorage.getItem("userId");
+          this.profile.userId = window.localStorage.getItem("userId");
         }
       });
     },
@@ -392,7 +392,7 @@ export default {
     handleCommand(command) {
       if (command === "quit") {
         // 清空token
-        localStorage.clear();
+        window.localStorage.clear();
         // 跳转到登录页
         this.$router.push("/login");
       } else if (command === "profile") {
