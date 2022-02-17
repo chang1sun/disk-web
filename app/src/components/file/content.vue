@@ -174,7 +174,9 @@
                 ></i>
               </span>
               <el-dropdown-menu slot="dropdown">
-                <el-dropdown-item>下载</el-dropdown-item>
+                <el-dropdown-item @click.native="download(scope.row)"
+                  >下载</el-dropdown-item
+                >
                 <el-dropdown-item @click.native="rename(scope.row.docId)"
                   >重命名</el-dropdown-item
                 >
@@ -326,12 +328,16 @@
           <el-input v-model="userId" placeholder="上传用户" readonly></el-input>
         </el-form-item>
         <el-form-item label="有效时长">
-          <el-input v-model="share.expireVal" class="input-with-select" style="width: 160px;">
+          <el-input
+            v-model="share.expireVal"
+            class="input-with-select"
+            style="width: 160px"
+          >
             <el-select
               v-model="share.expireUnit"
               slot="append"
               placeholder="天"
-              style="width: 60px;"
+              style="width: 60px"
             >
               <el-option label="时" value="1"></el-option>
               <el-option label="天" value="2"></el-option>
@@ -381,6 +387,8 @@
 </template>
 <script>
 import SparkMD5 from "spark-md5";
+import fileDownload from "js-file-download";
+
 export default {
   data() {
     return {
@@ -493,9 +501,7 @@ export default {
     },
     enterFolder(docName) {
       var path = this.getPathString() + docName + "/";
-      this.$router.push(
-        "/home/contents/" + encodeURIComponent(path)
-      );
+      this.$router.push("/home/contents/" + encodeURIComponent(path));
     },
     showCopyDialog(data) {
       this.copyDialogVisible = true;
@@ -545,9 +551,29 @@ export default {
       }
     },
     copyShareToClipboard() {
-      navigator.clipboard.writeText(this.userId + '给你分享了一个文件' + '，快打开看看吧！'
-      + '链接：' + this.share.url + '，提取码：' + this.share.password);
-      this.$message.success('复制成功！')
+      navigator.clipboard.writeText(
+        this.userId +
+          "给你分享了一个文件" +
+          "，快打开看看吧！" +
+          "链接：" +
+          this.share.url +
+          "，提取码：" +
+          this.share.password
+      );
+      this.$message.success("复制成功！");
+    },
+    download(doc) {
+      const params = {
+        uniFileId: doc.uniFileId,
+      };
+      this.$http
+        .get("file/download", {
+          params: params,
+          responseType: "blob",
+        })
+        .then((res) => {
+          fileDownload(res.data, doc.docName);
+        });
     },
     loadNode(node, resolve) {
       if (node.level === 0) {
