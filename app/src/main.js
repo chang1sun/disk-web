@@ -36,6 +36,20 @@ axios.interceptors.response.use(config => {
   NProgress.done()
   return config
 })
+
+axios.interceptors.response.use(function (response) {
+  return response;
+}, function (error) {
+  if (401 === error.response.status) {
+      // 清空token
+      window.localStorage.clear();
+      // 跳转到登录页
+      this.$router.push("/login");
+      this.$message.warn("登录信息已过期，请重新登录！")
+    } else {
+      return Promise.reject(error);
+  }
+});
 // 将axios挂载到Vue原型对象上
 Vue.prototype.$http = axios
 

@@ -2,7 +2,7 @@
   <el-container class="home-container">
     <!-- 头部区域 -->
     <el-header class="header" name="home-header">
-      <img class="home-title" src="../assets/logo.png">
+      <img class="home-title" src="../assets/logo.png" />
       <div class="global-search">
         <el-autocomplete
           v-model="query"
@@ -45,9 +45,7 @@
           text-color="#fff"
           :collapse="false"
           router
-          :default-active="
-            '/home/contents/' + encodeURIComponent('/')
-          "
+          :default-active="'/home/contents/' + encodeURIComponent('/')"
         >
           <el-submenu :index="'1'">
             <!-- 一级菜单模板区域 -->
@@ -57,14 +55,8 @@
             </template>
             <!-- 二级菜单 -->
             <el-menu-item
-              :index="
-                '/home/contents/' + encodeURIComponent('/')
-              "
-              @click="
-                saveNavState(
-                  '/home/contents/' + encodeURIComponent('/')
-                )
-              "
+              :index="'/home/contents/' + encodeURIComponent('/')"
+              @click="saveNavState('/home/contents/' + encodeURIComponent('/'))"
             >
               <template slot="title">
                 <i class="el-icon-menu"></i>
@@ -117,11 +109,7 @@
             <!-- 二级菜单 -->
             <el-menu-item
               :index="'/home/record'"
-              @click="
-                saveNavState(
-                  '/home/record'
-                )
-              "
+              @click="saveNavState('/home/record')"
             >
               <template slot="title">
                 <i class="el-icon-toilet-paper"></i>
@@ -157,11 +145,15 @@
             :percentage="percentage"
             :color="colors"
           ></el-progress>
-          <span class="size-desc">{{
+          <div class="size-desc">
+            <p>已用空间</p>
+            <span>{{
             displaySize(parseInt(profile.usedSize)) +
             " / " +
             displaySize(parseInt(profile.totalSize))
           }}</span>
+          </div>
+          
         </div>
       </el-aside>
       <!-- 右侧主体区域 -->
@@ -197,28 +189,32 @@
             }}</el-descriptions-item>
           </el-descriptions>
         </el-dialog>
-        <el-dialog title="修改密码" :visible.sync="dialogModifyVisible" width="40%">
-          <el-form :model="modifyForm" :rules="modifyFormRules" ref="modifyForm" status-icon>
-          <el-form-item label="当前密码">
-              <el-input
-              placeholder="请输入当前密码"
-            v-model="modifyForm.oldPw"
+        <el-dialog
+          title="修改密码"
+          :visible.sync="dialogModifyVisible"
+          width="40%"
+        >
+          <el-form
+            :model="modifyForm"
+            :rules="modifyFormRules"
+            ref="modifyForm"
+            status-icon
           >
-          </el-input>
-          </el-form-item>
-          <el-form-item label="新密码">
-            <el-input
-            placeholder="请输入新的密码"
-            v-model="modifyForm.newPw"
-            show-password
-          ></el-input>
-          </el-form-item>
-          <el-form-item>
-            <el-button @click="dialogModifyVisible = false">取消
-            </el-button>
-            <el-button type="primary" @click="modifyPw">提交
-            </el-button>
-          </el-form-item>
+            <el-form-item label="当前密码">
+              <el-input placeholder="请输入当前密码" v-model="modifyForm.oldPw">
+              </el-input>
+            </el-form-item>
+            <el-form-item label="新密码">
+              <el-input
+                placeholder="请输入新的密码"
+                v-model="modifyForm.newPw"
+                show-password
+              ></el-input>
+            </el-form-item>
+            <el-form-item>
+              <el-button @click="dialogModifyVisible = false">取消 </el-button>
+              <el-button type="primary" @click="modifyPw">提交 </el-button>
+            </el-form-item>
           </el-form>
         </el-dialog>
         <!-- 路由占位符 -->
@@ -277,8 +273,8 @@ export default {
       dialogModifyVisible: false,
       percentage: 0,
       colors: [
-        { color: "#5cb87a", percentage: 40 },
-        { color: "#e6a23c", percentage: 80 },
+        { color: "#5cb87a", percentage: 60 },
+        { color: "#e6a23c", percentage: 90 },
         { color: "#f56c6c", percentage: 100 },
       ],
     };
@@ -310,9 +306,9 @@ export default {
     // 加载用户信息
     loadProfile() {
       this.$http.get(this.profile.userId + "/profile").then((res) => {
-        if (res.status !== 200)
+        if (res.status !== 200) {
           return this.$message.error("服务器异常，请重试!");
-        else if (res.data !== null && "code" in res.data) {
+        } else if (res.data !== null && "code" in res.data) {
           return this.$message.error(res.data.msg);
         } else {
           this.profile = res.data;
@@ -323,7 +319,7 @@ export default {
           );
           this.profile.userId = window.localStorage.getItem("userId");
         }
-      });
+      }).catch();
     },
     openEmailInput() {
       this.$prompt("请输入邮箱", "提示", {
@@ -406,7 +402,7 @@ export default {
         userId: this.profile.userId,
         oldPw: this.modifyForm.oldPw,
         newPw: this.modifyForm.newPw,
-      }
+      };
       this.$http.post("auth/modify-pw", data).then((res) => {
         if (res.status !== 200) {
           return this.$message.error("服务器异常，请重试!");
@@ -421,7 +417,7 @@ export default {
           return this.$message.success("设置成功!");
         }
       });
-    }
+    },
   },
   mounted() {
     this.loadProfile();
@@ -465,8 +461,8 @@ export default {
 .home-title {
   display: inline-block;
   margin: -1px;
-  width:200px;
-  height:60px;
+  width: 200px;
+  height: 60px;
   border: none;
 }
 .user-profile {
@@ -488,12 +484,12 @@ export default {
 .left-size {
   position: absolute;
   left: 20px;
-  bottom: 20px;
+  bottom: 50px;
 }
 /deep/ .el-progress__text {
   color: #fff;
 }
 .el-avatar {
-  background: #3399CC;
+  background: #3399cc;
 }
 </style>

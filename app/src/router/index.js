@@ -9,7 +9,7 @@ const Forget = () => import('../views/forget.vue')
 const Home = () => import('../views/home.vue')
 const Content = () => import('../components/file/content.vue')
 const Recycle = () => import('../components/file/recycle.vue')
-const Record = () => import('../components/file/record.vue')
+const Record = () => import('../components/share/record.vue')
 const Class = () => import('../components/file/class.vue')
 const Share = () => import('../components/share/share.vue')
 

@@ -46,7 +46,8 @@
             <el-card>
               <h4 v-if="item.type == 1">分享了文件<el-button type="text">{{ item.docName }}</el-button></h4>
               <h4 v-else>转存了文件<el-button type="text">{{ item.docName }}</el-button></h4>
-              <p v-if="new Date(+item.expireTime).getTime() >= Date.now()">{{ '失效日期: ' + new Date(+item.expireTime).toLocaleString() }}</p>
+              <p v-if="item.status===2" style="color: #ff6666">此分享已被删除</p>
+              <p v-else-if="new Date(+item.expireTime).getTime() >= Date.now()">{{ '失效日期: ' + new Date(+item.expireTime).toLocaleString() }}</p>
               <p v-else style="color: #ff6666">此分享已失效</p>
             </el-card>
           </el-timeline-item>

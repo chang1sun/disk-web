@@ -12,8 +12,7 @@
         :key="index"
         :to="{
           path:
-            '/' +
-            userId +
+            '/home' +
             '/contents/' +
             encodeURIComponent(
               '/' +
@@ -99,6 +98,7 @@
       max-height="550"
       @selection-change="handleSelectionChange"
       :default-sort="{ prop: 'isDir', order: 'ascending' }"
+      @row-dblclick="handleFilePreview"
       v-loading="contentLoading"
     >
       <el-table-column type="selection" width="55"> </el-table-column>
@@ -388,6 +388,7 @@
 <script>
 import SparkMD5 from "spark-md5";
 import fileDownload from "js-file-download";
+import { Base64 } from "js-base64";
 
 export default {
   data() {
@@ -502,6 +503,16 @@ export default {
     enterFolder(docName) {
       var path = this.getPathString() + docName + "/";
       this.$router.push("/home/contents/" + encodeURIComponent(path));
+    },
+    handleFilePreview(row) {
+      if (row.isDir === 1) {
+        return;
+      }
+      var originUrl = "http://127.0.0.1:8001/v1/file/download?uniFileId=" + row.uniFileId + '&fullfilename=' + row.docName; //要预览文件的访问地址
+      window.open(
+        "http://127.0.0.1:8012/onlinePreview?url=" +
+          encodeURIComponent(originUrl)
+      );
     },
     showCopyDialog(data) {
       this.copyDialogVisible = true;
