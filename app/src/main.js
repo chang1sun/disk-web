@@ -25,7 +25,7 @@ Vue.use(elTableInfiniteScroll);
 // 开发环境
 // axios.defaults.baseURL = 'http://127.0.0.1:8001/v1/'
 // 生产环境
-axios.defaults.baseURL = 'http://101.43.187.239:8001/v1/'
+axios.defaults.baseURL = 'http://easydisk.top/api/v1/'
 
 axios.defaults.timeout = 15 * 1000 // 请求超时时间
 
