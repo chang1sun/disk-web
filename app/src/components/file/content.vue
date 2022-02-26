@@ -543,7 +543,7 @@ export default {
         } else if (res.data !== null) {
           this.share.token = res.data.token;
           this.share.password = res.data.password;
-          this.share.url = "http://localhost:8080/share/" + res.data.token;
+          this.share.url = "https://easydisk.top/share/" + res.data.token;
           this.createShareLoading = false;
         }
       });
