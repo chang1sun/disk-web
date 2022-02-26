@@ -235,7 +235,7 @@ export default {
       if (data.isDir === 1) {
         return;
       }
-      var originUrl = "https://easydisk.top/api/v1/file/download?uniFileId=" + row.uniFileId + '&fullfilename=' + row.docName; //要预览文件的访问地址
+      var originUrl = "https://easydisk.top/api/v1/file/download?uniFileId=" + data.uniFileId + '&fullfilename=' + data.docName; //要预览文件的访问地址
       window.open(
         "http://easydisk.top/onlinePreview?url=" +
           encodeURIComponent(originUrl)
