@@ -237,7 +237,7 @@ export default {
       }
       var originUrl = "https://easydisk.top/api/v1/file/download?uniFileId=" + data.uniFileId + '&fullfilename=' + data.docName; //要预览文件的访问地址
       window.open(
-        "http://101.43.187.239:8012/onlinePreview?url=" +
+        "http://easydisk.top:8012/onlinePreview?url=" +
           encodeURIComponent(originUrl)
       );
     },
