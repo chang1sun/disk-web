@@ -510,7 +510,7 @@ export default {
       }
       var originUrl = "https://easydisk.top/api/v1/file/download?uniFileId=" + row.uniFileId + '&fullfilename=' + row.docName; //要预览文件的访问地址
       window.open(
-        "http://easydisk.top:8012/onlinePreview?url=" +
+        "http://easydisk.top/onlinePreview?url=" +
           encodeURIComponent(originUrl)
       );
     },
