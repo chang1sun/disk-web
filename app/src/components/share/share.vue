@@ -69,7 +69,7 @@
               <el-button
                 type="primary"
                 icon="el-icon-receiving"
-                @click="retrieveShare()"
+                @click="retrieveShare"
                 >转存
               </el-button>
             </el-badge>
@@ -77,11 +77,17 @@
               type="primary"
               icon="el-icon-receiving"
               plain
-              @click="downloadShare()"
+              @click="downloadShare"
               >下载到本地
             </el-button>
           </div>
           <div class="btns" v-else>
+            <el-button
+              type="info"
+              icon="el-icon-link"
+              @click="copyShareToClipboard"
+              >复制分享邀请
+            </el-button>
             <el-button
               type="danger"
               icon="el-icon-delete"
@@ -132,6 +138,21 @@
             </el-card>
           </div>
         </el-main>
+        <el-dialog
+          name="retrieveDialog"
+          title="选择保存的路径"
+          :visible.sync="retrieveDialogVisible"
+          width="40%"
+        >
+          <el-tree
+            :props="retrieveDialog.tree.defaultProps"
+            :load="loadNode"
+            node-key="id"
+            lazy
+            @node-click="retrieveToPath"
+          >
+          </el-tree>
+        </el-dialog>
       </el-container>
     </div>
   </div>
@@ -151,6 +172,20 @@ export default {
       shareDetail: {},
       tokenExist: false,
       accessPermit: false,
+      // 转存对话框
+      retrieveDialogVisible: false,
+      retrieveDialog: {
+        tree: {
+          defaultProps: {
+            label: "docName",
+            isLeaf: (data, node) => {
+              return data.isDir === 1 ? false : true;
+            },
+            children: "children",
+          },
+        },
+      },
+
       // 树形控件
       shareTree: {
         treeLoading: false,
@@ -166,6 +201,83 @@ export default {
     };
   },
   methods: {
+    retrieveShare() {
+      this.retrieveDialogVisible = true;
+    },
+    loadNode(node, resolve) {
+      if (node.level === 0) {
+        resolve([{
+          docName: '根目录',
+          docPath: '~',
+          isDir: 1,
+        }])
+      }
+      else if (node.level === 1) {
+        this.$http
+          .get(this.userId + "/files", {
+            params: { path: "/", show_hide: true },
+          })
+          .then((res) => {
+            if (res.status !== 200) {
+              return this.$message.error("服务器异常，请重试!");
+            } else if (res.data !== null && "code" in res.data) {
+              return this.$message.error(res.data.msg);
+            } else if (res.data !== null) {
+              resolve(res.data.details);
+            }
+          });
+      } else {
+        if (node.data !== null) {
+          this.$http
+            .get(this.userId + "/files", {
+              params: {
+                path: node.data.docPath + node.data.docName + "/",
+                showHide: 1,
+              },
+            })
+            .then((res) => {
+              if (res.status !== 200) {
+                return this.$message.error("服务器异常，请重试!");
+              } else if (res.data !== null && "code" in res.data) {
+                return this.$message.error(res.data.msg);
+              } else if (res.data !== null) {
+                resolve(res.data.details);
+              }
+            });
+        }
+      }
+    },
+    retrieveToPath(data, node, item) {
+      this.$confirm("将分享内容转存至该路径下吗?", "提示", {
+        confirmButtonText: "确定",
+        cancelButtonText: "取消",
+        type: "info",
+      })
+        .then(() => {
+          const path = data.docPath === '~' ? '/' : data.docPath + data.docName + '/'
+          const postdata = {
+            userId: this.userId,
+            path: path,
+            token: this.token,
+          };
+          this.$http.post("files/save-from-share", postdata).then((res) => {
+            if (res.status !== 200) {
+              return this.$message.error("服务器异常，请重试!");
+            } else if (res.data !== null && "code" in res.data) {
+              if (res.data.code === 10105) {
+                return this.$message.error("路径不存在！请刷新重试");
+              } else if (res.data.code === 10106) {
+                return this.$message.error("已存在同名文件或文件夹！");
+              }
+              return this.$message.error(res.data.msg);
+            } else if (res.data !== null) {
+              this.retrieveDialogVisible = false;
+              return this.$message.success("已成功转存该分享!");
+            }
+          });
+        })
+        .catch(() => {});
+    },
     displaySize() {
       const size = this.shareDetail.docSize;
       if (size === 0 || !size) {
@@ -189,6 +301,9 @@ export default {
         } else if (res.data !== null) {
           this.tokenExist = true;
           this.shareGlimpse = res.data;
+          if (res.data.uploader === this.userId) {
+            this.manageShare();
+          }
         }
       });
     },
@@ -235,10 +350,14 @@ export default {
       if (data.isDir === 1) {
         return;
       }
-      var originUrl = "https://easydisk.top/api/v1/file/download?uniFileId=" + data.uniFileId + '&fullfilename=' + data.docName; //要预览文件的访问地址
+      var originUrl =
+        this.$http.defaults.baseURL
+        "file/download?uniFileId=" +
+        data.uniFileId +
+        "&fullfilename=" +
+        data.docName; //要预览文件的访问地址
       window.open(
-        "http://easydisk.top/onlinePreview?url=" +
-          encodeURIComponent(originUrl)
+        "http://easydisk.top/onlinePreview?url=" + encodeURIComponent(originUrl)
       );
     },
     downloadShare() {
@@ -328,21 +447,43 @@ export default {
           }
         });
     },
-    deleteShare() {
-      const postForm = {
-        userId: this.userId,
-        token: this.token
-      };
-      this.$http.post('share/delete', postForm).then(res => {
-        if (res.status !== 200)
+    manageShare() {
+      this.$http
+        .get("share/" + this.token + '/manage', {
+          params: { user_id: this.userId },
+        })
+        .then((res) => {
+          if (res.status !== 200)
             return this.$message.error("请求服务器异常，请重试!");
           else if (res.data !== null && "code" in res.data) {
             if (res.data.code === 10108) {
               return this.$message.error("未找到该链接对应的分享！");
             }
             return this.$message.error(res.data.msg);
+          } else if (res.data !== null) {
+            this.shareDetail = res.data;
+            this.accessPermit = true;
+            if (res.data.isDir === 1) {
+              this.getShareTreeNode();
+            }
           }
-      })
+        });
+    },
+    deleteShare() {
+      const postForm = {
+        userId: this.userId,
+        token: this.token,
+      };
+      this.$http.post("share/delete", postForm).then((res) => {
+        if (res.status !== 200)
+          return this.$message.error("请求服务器异常，请重试!");
+        else if (res.data !== null && "code" in res.data) {
+          if (res.data.code === 10108) {
+            return this.$message.error("未找到该链接对应的分享！");
+          }
+          return this.$message.error(res.data.msg);
+        }
+      });
     },
     subStrNum(str, len) {
       var strLen = str.length;
@@ -384,6 +525,19 @@ export default {
       }
       console.log("not possible");
       return "";
+    },
+    copyShareToClipboard() {
+      navigator.clipboard.writeText(
+        this.userId +
+          "给你分享了一个文件" +
+          "，快打开看看吧！" +
+          "链接：" +
+          "https://easydisk.top/share/" +
+          this.token +
+          "，提取码：" +
+          this.shareDetail.password
+      );
+      this.$message.success("复制成功！");
     },
   },
   created() {
