@@ -357,7 +357,8 @@ export default {
         "&fullfilename=" +
         data.docName; //要预览文件的访问地址
       window.open(
-        "http://easydisk.top/onlinePreview?url=" + encodeURIComponent(originUrl)
+        "http://easydisk.top:8012/onlinePreview?url=" +
+          encodeURIComponent(originUrl)
       );
     },
     downloadShare() {
