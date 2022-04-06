@@ -3,14 +3,6 @@
     <!-- 头部区域 -->
     <el-header class="header" name="home-header">
       <img class="home-title" src="../assets/logo.png" />
-      <div class="global-search">
-        <el-autocomplete
-          v-model="query"
-          :fetch-suggestions="querySearchAsync"
-          placeholder="请输入想要搜索的内容"
-          @select="handleSelect"
-        ></el-autocomplete>
-      </div>
       <div class="user-profile">
         <el-dropdown @command="handleCommand">
           <span class="el-dropdown-link">
@@ -348,42 +340,6 @@ export default {
             message: "取消输入",
           });
         });
-    },
-    // 以下是全局搜索的方法
-    // 加载搜索提示
-    loadAll() {
-      return [
-        { value: "三全鲜食（北新泾店）", address: "长宁区新渔路144号" },
-        {
-          value: "Hot honey 首尔炸鸡（仙霞路）",
-          address: "上海市长宁区淞虹路661号",
-        },
-        {
-          value: "新旺角茶餐厅",
-          address: "上海市普陀区真北路988号创邑金沙谷6号楼113",
-        },
-      ];
-    },
-    querySearchAsync(queryString, cb) {
-      var restaurants = this.restaurants;
-      var results = queryString
-        ? restaurants.filter(this.createStateFilter(queryString))
-        : restaurants;
-
-      clearTimeout(this.timeout);
-      this.timeout = setTimeout(() => {
-        cb(results);
-      }, 3000 * Math.random());
-    },
-    createStateFilter(queryString) {
-      return (query) => {
-        return (
-          query.value.toLowerCase().indexOf(queryString.toLowerCase()) === 0
-        );
-      };
-    },
-    handleSelect(item) {
-      console.log(item);
     },
     handleCommand(command) {
       if (command === "quit") {
