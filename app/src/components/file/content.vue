@@ -588,6 +588,13 @@ export default {
     },
     loadNode(node, resolve) {
       if (node.level === 0) {
+        resolve([{
+          docName: '根目录',
+          docPath: '~',
+          isDir: 1,
+        }])
+      }
+      else if (node.level === 1) {
         this.$http
           .get(this.userId + "/files", {
             params: { path: "/", show_hide: true },
