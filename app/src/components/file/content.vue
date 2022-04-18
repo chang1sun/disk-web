@@ -752,9 +752,11 @@ export default {
         type: "info",
       })
         .then(() => {
+          let docName = data.docPath === '~' ? '' : data.docName;
+          let docPath = data.docPath === '~' ? '' : data.docPath;
           const postdata = {
             userId: this.userId,
-            path: data.docPath + data.docName + "/",
+            path: docPath + docName + "/",
             ids: [this.singleSelection.docId],
             overwrite: 2,
           };
@@ -785,9 +787,11 @@ export default {
       })
         .then(() => {
           let ids = this.multipleSelection.map((a) => a.docId);
+          let docName = data.docPath === '~' ? '' : data.docName;
+          let docPath = data.docPath === '~' ? '' : data.docPath;
           const postdata = {
             userId: this.userId,
-            path: data.docPath + data.docName + "/",
+            path: docPath + docName + "/",
             ids: ids,
             overwrite: 2,
           };
@@ -817,9 +821,11 @@ export default {
         type: "info",
       })
         .then(() => {
+          let docName = data.docPath === '~' ? '' : data.docName;
+          let docPath = data.docPath === '~' ? '' : data.docPath;
           const postdata = {
             userId: this.userId,
-            path: data.docPath + data.docName + "/",
+            path: docPath + docName + "/",
             ids: [this.singleSelection.docId],
             overwrite: 2,
           };
@@ -850,9 +856,11 @@ export default {
       })
         .then(() => {
           let ids = this.multipleSelection.map((a) => a.docId);
+          let docName = data.docPath === '~' ? '' : data.docName;
+          let docPath = data.docPath === '~' ? '' : data.docPath;
           const postdata = {
             userId: this.userId,
-            path: data.docPath + data.docName + "/",
+            path: docPath + docName + "/",
             ids: ids,
             overwrite: 2,
           };
