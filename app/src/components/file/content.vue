@@ -198,7 +198,6 @@
                   @click.native="showCreateShareDialog(scope.row)"
                   >分享</el-dropdown-item
                 >
-                <el-dropdown-item disabled>面对面分享</el-dropdown-item>
               </el-dropdown-menu>
             </el-dropdown>
           </div>

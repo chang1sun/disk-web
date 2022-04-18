@@ -108,22 +108,7 @@
                 <span>分享记录</span>
               </template>
             </el-menu-item>
-            <el-menu-item
-              :index="'/home/face-to-face-share'"
-              @click="saveNavState('/home/face-to-face-share')"
-            >
-              <template slot="title">
-                <i class="el-icon-position"></i>
-                <span>面对面分享</span>
-              </template>
-            </el-menu-item>
           </el-submenu>
-          <el-menu-item :index="'/home/statistic'">
-            <template slot="title">
-              <i class="el-icon-s-data"></i>
-              <span>统计与分析</span>
-            </template>
-          </el-menu-item>
           <el-menu-item :index="'/home/recycle-bin'">
             <template slot="title">
               <i class="el-icon-delete"></i>
