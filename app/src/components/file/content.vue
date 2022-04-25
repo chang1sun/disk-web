@@ -1082,7 +1082,6 @@ export default {
       var flag = true;
       var fusion = 0;
       while (nextIdx < chunkListLength) {
-        console.log(uploadData);
         await this.$http
           .post("file/mp-upload", uploadData, { header: formHeader })
           .then((res) => {
