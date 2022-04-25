@@ -1,5 +1,5 @@
-# disk-web
-
+# Introduction
+A web app designed for easy-disk built by Vue.js
 ## Project setup
 ```
 cd app
