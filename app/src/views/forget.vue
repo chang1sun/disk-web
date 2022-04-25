@@ -118,6 +118,9 @@ export default {
     };
   },
   methods: {
+    returnToLogin() {
+      this.$router.push("/login");
+    },
     // 点击重置按钮，重置登录表单
     restForgetForm() {
       // console.log(this);
