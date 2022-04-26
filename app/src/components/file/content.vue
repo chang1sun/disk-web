@@ -37,13 +37,6 @@
       >
       <el-button
         type="primary"
-        icon="el-icon-download"
-        plain
-        :disabled="multipleSelection.length === 0"
-        >下载</el-button
-      >
-      <el-button
-        type="primary"
         icon="el-icon-copy-document"
         plain
         @click="copyMulDialogVisible = true"
