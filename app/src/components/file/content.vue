@@ -198,7 +198,6 @@
                   @click.native="showCreateShareDialog(scope.row)"
                   >分享</el-dropdown-item
                 >
-                <el-dropdown-item disabled>面对面分享</el-dropdown-item>
               </el-dropdown-menu>
             </el-dropdown>
           </div>
@@ -434,7 +433,7 @@ export default {
       isFileSelected: false,
       uploadPercent: 0,
       fileList: [],
-      chunkSize: 1024 * 1024 * 50, // 分块大小：50Mb
+      chunkSize: 1024 * 1024 * 5, // 分块大小：5Mb
     };
   },
   created() {
@@ -1004,7 +1003,7 @@ export default {
       spark.append(buffer);
       const md5 = spark.end();
       const formHeader = { "Content-Type": "multipart/form-data" };
-      // 低于50mb直接一次上传
+      // 低于5mb直接一次上传
       if (fileObj.size < this.chunkSize) {
         const formData = new FormData();
         formData.append("user_id", this.userId);
@@ -1029,7 +1028,7 @@ export default {
           });
         return;
       }
-      // 将文件按固定大小（50M）进行切片，注意此处同时声明了多个常量
+      // 将文件按固定大小（5M）进行切片
       const chunkList = []; // 保存所有切片的数组
       const chunkListLength = Math.ceil(fileObj.size / this.chunkSize); // 计算总共多个切片
       // 发送探测请求
@@ -1083,7 +1082,6 @@ export default {
       var flag = true;
       var fusion = 0;
       while (nextIdx < chunkListLength) {
-        console.log(uploadData);
         await this.$http
           .post("file/mp-upload", uploadData, { header: formHeader })
           .then((res) => {
